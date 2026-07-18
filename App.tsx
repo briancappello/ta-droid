@@ -14,6 +14,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import PortfolioScreen from './src/screens/PortfolioScreen';
 import ChartScreen from './src/screens/ChartScreen';
+import OrderEntryScreen from './src/screens/OrderEntryScreen';
 import TradingScreen from './src/screens/TradingScreen';
 import AccountsScreen from './src/screens/AccountsScreen';
 import { AccountProvider } from './src/AccountContext';
@@ -53,6 +54,11 @@ function PortfolioStack() {
         name="Chart"
         component={ChartScreen}
         options={({ route }) => ({ title: route.params.ticker })}
+      />
+      <Stack.Screen
+        name="OrderEntry"
+        component={OrderEntryScreen}
+        options={{ title: 'Order' }}
       />
     </Stack.Navigator>
   );
