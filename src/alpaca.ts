@@ -82,9 +82,95 @@ async function alpacaRequest<T>(
     const text = await response.text().catch(() => '');
     throw new AlpacaError(response.status, messageForStatus(response.status, text));
   }
-  return response.json() as Promise<T>;
+  if (response.status === 204) {
+    return undefined as T;
+  }
+  const text = await response.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 export async function listPositions(account: Account): Promise<AlpacaPosition[]> {
   return alpacaRequest<AlpacaPosition[]>(account, '/v2/positions');
+}
+
+export type OrderSide = 'buy' | 'sell';
+export type OrderType = 'market' | 'limit' | 'stop' | 'stop_limit' | 'trailing_stop';
+export type TimeInForce = 'day' | 'gtc' | 'ioc' | 'fok' | 'opg' | 'cls';
+
+export type AlpacaOrder = {
+  id: string;
+  symbol: string;
+  qty: string | null;
+  notional: string | null;
+  side: OrderSide;
+  type: OrderType;
+  time_in_force: TimeInForce;
+  limit_price: string | null;
+  stop_price: string | null;
+  trail_percent: string | null;
+  status: string;
+};
+
+export type NewOrderRequest = {
+  symbol: string;
+  side: OrderSide;
+  type: OrderType;
+  time_in_force: TimeInForce;
+  qty?: string;
+  notional?: string;
+  limit_price?: string;
+  stop_price?: string;
+  trail_percent?: string;
+  extended_hours?: boolean;
+};
+
+export type ReplaceOrderRequest = {
+  qty?: string;
+  time_in_force?: TimeInForce;
+  limit_price?: string;
+  stop_price?: string;
+  trail?: string;
+};
+
+export async function listOpenOrders(account: Account): Promise<AlpacaOrder[]> {
+  return alpacaRequest<AlpacaOrder[]>(account, '/v2/orders?status=open');
+}
+
+export async function createOrder(
+  account: Account,
+  req: NewOrderRequest,
+): Promise<AlpacaOrder> {
+  return alpacaRequest<AlpacaOrder>(account, '/v2/orders', {
+    method: 'POST',
+    body: req,
+  });
+}
+
+export async function replaceOrder(
+  account: Account,
+  id: string,
+  req: ReplaceOrderRequest,
+): Promise<AlpacaOrder> {
+  return alpacaRequest<AlpacaOrder>(
+    account,
+    `/v2/orders/${encodeURIComponent(id)}`,
+    { method: 'PATCH', body: req },
+  );
+}
+
+export async function cancelOrder(account: Account, id: string): Promise<void> {
+  await alpacaRequest<void>(account, `/v2/orders/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function closePosition(
+  account: Account,
+  symbol: string,
+): Promise<void> {
+  await alpacaRequest<void>(
+    account,
+    `/v2/positions/${encodeURIComponent(symbol)}`,
+    { method: 'DELETE' },
+  );
 }
