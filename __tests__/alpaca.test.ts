@@ -3,7 +3,6 @@ import {
   alpacaBaseUrl,
   alpacaHeaders,
   listPositions,
-  AlpacaError,
   type Account,
 } from '../src/alpaca';
 import {

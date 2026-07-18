@@ -75,7 +75,7 @@ async function alpacaRequest<T>(
       headers: alpacaHeaders(account),
       body: init.body != null ? JSON.stringify(init.body) : undefined,
     });
-  } catch (e) {
+  } catch {
     throw new AlpacaError(0, "Can't reach Alpaca — check your connection.");
   }
   if (!response.ok) {
