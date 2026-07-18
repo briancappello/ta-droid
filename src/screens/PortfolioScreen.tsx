@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { DrawerActions } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { fetchQuotes, apiQuoteToStockQuote, type StockQuote } from '../api';
@@ -66,7 +67,6 @@ function HeaderBar({
         <TouchableOpacity onPress={onAddPress}>
           <Text style={styles.headerIcon}>＋</Text>
         </TouchableOpacity>
-        <Text style={styles.headerIcon}>⋮</Text>
       </View>
     </View>
   );
@@ -264,7 +264,7 @@ export default function PortfolioScreen({ navigation }: Props) {
       <HeaderBar
         onAddPress={() => setModalVisible(true)}
         onRefreshPress={refreshQuotes}
-        onMenuPress={() => navigation.getParent()?.openDrawer()}
+        onMenuPress={() => navigation.dispatch(DrawerActions.openDrawer())}
       />
       <TabBar activeTab={activeTab} onTabPress={setActiveTab} />
       <ColumnHeaders />
