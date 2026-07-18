@@ -44,13 +44,17 @@ function formatPercent(pct: number): string {
 function HeaderBar({
   onAddPress,
   onRefreshPress,
+  onMenuPress,
 }: {
   onAddPress: () => void;
   onRefreshPress: () => void;
+  onMenuPress: () => void;
 }) {
   return (
     <View style={styles.headerBar}>
-      <Text style={styles.headerMenuIcon}>☰</Text>
+      <TouchableOpacity onPress={onMenuPress}>
+        <Text style={styles.headerMenuIcon}>☰</Text>
+      </TouchableOpacity>
       <View style={styles.headerTitleContainer}>
         <Text style={styles.headerTitle}>My Portfolio</Text>
         <Text style={styles.headerDropdown}> ▼</Text>
@@ -260,6 +264,7 @@ export default function PortfolioScreen({ navigation }: Props) {
       <HeaderBar
         onAddPress={() => setModalVisible(true)}
         onRefreshPress={refreshQuotes}
+        onMenuPress={() => navigation.getParent()?.openDrawer()}
       />
       <TabBar activeTab={activeTab} onTabPress={setActiveTab} />
       <ColumnHeaders />
