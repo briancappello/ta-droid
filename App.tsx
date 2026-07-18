@@ -85,8 +85,16 @@ function App() {
                 component={PortfolioStack}
                 options={{ title: 'Portfolio', headerShown: false }}
               />
-              <Drawer.Screen name="Trading" component={TradingScreen} />
-              <Drawer.Screen name="Accounts" component={AccountsScreen} />
+            <Drawer.Screen
+              name="Trading"
+              component={TradingScreen}
+              options={{ headerShown: false }}
+            />
+            <Drawer.Screen
+              name="Accounts"
+              component={AccountsScreen}
+              options={{ headerShown: false }}
+            />
             </Drawer.Navigator>
           </NavigationContainer>
         </AccountProvider>
