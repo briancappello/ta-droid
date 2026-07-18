@@ -11,6 +11,8 @@ import { WebView } from 'react-native-webview';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { fetchHistory, type HistoryResponse } from '../api';
+import { LIGHTWEIGHT_CHARTS_JS } from '../vendor/lightweightCharts';
+import { useAccounts } from '../AccountContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Chart'>;
 
@@ -36,8 +38,6 @@ const DAYS_MS = 24 * HOURS_MS;
 
 // Extended hours: 4am-8pm ET = 16 hours
 const EXTENDED_DAY_HOURS = 16;
-// Max intraday bars per day at 1min resolution
-const MAX_INTRADAY_BARS_PER_DAY = EXTENDED_DAY_HOURS * 60; // 960
 
 // Minutes per bar for each frequency (for request size estimation)
 const FREQ_MINUTES: Record<string, number> = {
@@ -301,9 +301,7 @@ function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
       document.body.innerHTML = '<pre style="color:red;padding:20px">' + msg + '\\n' + url + ':' + line + '</pre>';
     };
   </script>
-  <script src="https://unpkg.com/lightweight-charts@4/dist/lightweight-charts.standalone.production.js"
-    onerror="document.body.innerHTML='<pre style=\\'color:red;padding:20px\\'>Failed to load chart library</pre>';">
-  </script>
+  <script>${LIGHTWEIGHT_CHARTS_JS}</script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { background: #1a1a2e; overflow: hidden; width: 100vw; height: 100vh; }
@@ -586,8 +584,9 @@ function FreqDropdown({
 
 // --- Screen ---
 
-export default function ChartScreen({ route }: Props) {
+export default function ChartScreen({ route, navigation }: Props) {
   const { ticker } = route.params;
+  const { activeId } = useAccounts();
   const [rangeIndex, setRangeIndex] = useState(4); // default 1Y
   const [freq, setFreq] = useState('D');
   const [html, setHtml] = useState<string | null>(null);
@@ -644,6 +643,17 @@ export default function ChartScreen({ route }: Props) {
           selected={freq}
           onSelect={setFreq}
         />
+        <TouchableOpacity
+          style={styles.tradeButton}
+          onPress={() =>
+            navigation.navigate('OrderEntry', {
+              symbol: ticker,
+              accountId: activeId ?? undefined,
+            })
+          }
+        >
+          <Text style={styles.tradeButtonText}>Trade</Text>
+        </TouchableOpacity>
       </View>
       {error ? (
         <View style={styles.center}>
@@ -697,6 +707,14 @@ const styles = StyleSheet.create({
   pillActive: {
     backgroundColor: '#2196f3',
   },
+  tradeButton: {
+    marginLeft: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    backgroundColor: '#2196f3',
+  },
+  tradeButtonText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   pillText: {
     color: '#888',
     fontSize: 12,
