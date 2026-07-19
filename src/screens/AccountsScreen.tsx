@@ -80,8 +80,8 @@ export default function AccountsScreen({ navigation }: { navigation: any }) {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.openDrawer()}>
-          <Text style={styles.menuIcon}>☰</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={styles.menuIcon}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Accounts</Text>
         <TouchableOpacity onPress={openAdd}>

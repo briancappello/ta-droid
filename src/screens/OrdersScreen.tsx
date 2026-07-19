@@ -36,10 +36,8 @@ function OrdersScreen({ navigation }: { navigation: any }) {
   const [tagged, setTagged] = useState<Tagged<AlpacaOrder>[]>([]);
   const [selection, setSelection] = useState<StrategySelection>('all');
   const [error, setError] = useState<string | null>(null);
-  const [, setLoading] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
     setError(null);
     const results = await Promise.allSettled(
       accounts.map(a => listOpenOrders(a)),
@@ -62,7 +60,6 @@ function OrdersScreen({ navigation }: { navigation: any }) {
     setError(firstError);
     const strategyOf = await loadTagger();
     setTagged(tagAll(perAccount, strategyOf));
-    setLoading(false);
   }, [accounts]);
 
   useEffect(() => {
@@ -129,7 +126,7 @@ function OrdersScreen({ navigation }: { navigation: any }) {
               <Text style={styles.bucketName}>
                 {bucket.account.name}{' '}
                 <Text style={styles.env}>
-                  ({bucket.account.env === 'live' ? 'live' : 'paper'})
+                  ({bucket.account.env})
                 </Text>
               </Text>
               <Text style={styles.bucketCount}>
