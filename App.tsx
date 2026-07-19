@@ -12,55 +12,49 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import PortfolioScreen from './src/screens/PortfolioScreen';
-import ChartScreen from './src/screens/ChartScreen';
-import OrderEntryScreen from './src/screens/OrderEntryScreen';
-import TradingScreen from './src/screens/TradingScreen';
+import PositionsScreen from './src/screens/PositionsScreen';
+import OrdersScreen from './src/screens/OrdersScreen';
+import WatchlistsScreen from './src/screens/WatchlistsScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+import BackendSettingsScreen from './src/screens/BackendSettingsScreen';
 import AccountsScreen from './src/screens/AccountsScreen';
 import { AccountProvider } from './src/AccountContext';
+import { BackendProvider } from './src/BackendContext';
 import type { AlpacaOrder } from './src/alpaca';
 
+// RootStackParamList is exported now (an exported type is never an
+// unused-var lint error) and consumed by the ChartStack added in Task 11.
+// ChartScreen/OrderEntryScreen/ExitScreen are NOT imported here in Phase 1 —
+// importing an unused value WOULD fail `npm run lint`. Task 11 re-adds them.
 export type RootStackParamList = {
-  Portfolio: undefined;
   Chart: { ticker: string };
   OrderEntry: { accountId?: string; symbol?: string; order?: AlpacaOrder };
+  Exit: { symbol: string };
+};
+
+export type SettingsStackParamList = {
+  SettingsHome: undefined;
+  Accounts: undefined;
+  Backend: undefined;
 };
 
 export type RootDrawerParamList = {
-  PortfolioStack: undefined;
-  Trading: undefined;
-  Accounts: undefined;
+  Positions: undefined;
+  Orders: undefined;
+  Watchlists: undefined;
+  SettingsStack: undefined;
 };
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
 const Drawer = createDrawerNavigator<RootDrawerParamList>();
+const SettingsNav = createNativeStackNavigator<SettingsStackParamList>();
 
-const stackScreenOptions = {
-  headerStyle: { backgroundColor: '#1a1a2e' },
-  headerTintColor: '#ffffff',
-  headerTitleStyle: { fontWeight: 'bold' as const },
-  contentStyle: { backgroundColor: '#1a1a2e' },
-};
-
-function PortfolioStack() {
+function SettingsStack() {
   return (
-    <Stack.Navigator screenOptions={stackScreenOptions}>
-      <Stack.Screen
-        name="Portfolio"
-        component={PortfolioScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Chart"
-        component={ChartScreen}
-        options={({ route }) => ({ title: route.params.ticker })}
-      />
-      <Stack.Screen
-        name="OrderEntry"
-        component={OrderEntryScreen}
-        options={{ title: 'Order' }}
-      />
-    </Stack.Navigator>
+    <SettingsNav.Navigator screenOptions={{ headerShown: false }}>
+      <SettingsNav.Screen name="SettingsHome" component={SettingsScreen} />
+      <SettingsNav.Screen name="Accounts" component={AccountsScreen} />
+      <SettingsNav.Screen name="Backend" component={BackendSettingsScreen} />
+    </SettingsNav.Navigator>
   );
 }
 
@@ -70,33 +64,27 @@ function App() {
       <SafeAreaProvider>
         <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
         <AccountProvider>
-          <NavigationContainer>
-            <Drawer.Navigator
-              screenOptions={{
-                headerStyle: { backgroundColor: '#1a1a2e' },
-                headerTintColor: '#ffffff',
-                drawerStyle: { backgroundColor: '#16213e' },
-                drawerActiveTintColor: '#2196f3',
-                drawerInactiveTintColor: '#ccc',
-              }}
-            >
-              <Drawer.Screen
-                name="PortfolioStack"
-                component={PortfolioStack}
-                options={{ title: 'Portfolio', headerShown: false }}
-              />
-            <Drawer.Screen
-              name="Trading"
-              component={TradingScreen}
-              options={{ headerShown: false }}
-            />
-            <Drawer.Screen
-              name="Accounts"
-              component={AccountsScreen}
-              options={{ headerShown: false }}
-            />
-            </Drawer.Navigator>
-          </NavigationContainer>
+          <BackendProvider>
+            <NavigationContainer>
+              <Drawer.Navigator
+                screenOptions={{
+                  headerShown: false,
+                  drawerStyle: { backgroundColor: '#16213e' },
+                  drawerActiveTintColor: '#2196f3',
+                  drawerInactiveTintColor: '#ccc',
+                }}
+              >
+                <Drawer.Screen name="Positions" component={PositionsScreen} />
+                <Drawer.Screen name="Orders" component={OrdersScreen} />
+                <Drawer.Screen name="Watchlists" component={WatchlistsScreen} />
+                <Drawer.Screen
+                  name="SettingsStack"
+                  component={SettingsStack}
+                  options={{ title: 'Settings' }}
+                />
+              </Drawer.Navigator>
+            </NavigationContainer>
+          </BackendProvider>
         </AccountProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
