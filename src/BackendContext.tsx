@@ -3,8 +3,10 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useState,
 } from 'react';
+import { pingHealth } from './techan';
 
 export type BackendHealth = 'up' | 'down' | 'unknown';
 
@@ -18,15 +20,26 @@ const BackendCtx = createContext<Ctx | null>(null);
 
 export function BackendProvider({
   children,
+  poll = false,
 }: {
   children: React.ReactNode;
   poll?: boolean;
 }) {
   const [health, setHealth] = useState<BackendHealth>('unknown');
 
-  // ponytail: real fa-techan health ping lands in Phase 4 (Task 16).
-  // Until then refresh is a no-op and health is driven by setHealth.
-  const refresh = useCallback(async () => {}, []);
+  const refresh = useCallback(async () => {
+    const ok = await pingHealth();
+    setHealth(ok ? 'up' : 'down');
+  }, []);
+
+  useEffect(() => {
+    if (!poll) {
+      return;
+    }
+    refresh();
+    const id = setInterval(refresh, 20000);
+    return () => clearInterval(id);
+  }, [poll, refresh]);
 
   return (
     <BackendCtx.Provider value={{ health, setHealth, refresh }}>

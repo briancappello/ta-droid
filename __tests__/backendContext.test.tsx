@@ -3,6 +3,8 @@ import React from 'react';
 import ReactTestRenderer, { act } from 'react-test-renderer';
 import { Text } from 'react-native';
 import { BackendProvider, useBackend } from '../src/BackendContext';
+import * as techan from '../src/techan';
+jest.mock('../src/techan');
 
 function Probe({ onReady }: { onReady: (v: ReturnType<typeof useBackend>) => void }) {
   const v = useBackend();
@@ -69,4 +71,26 @@ test('useBackend throws outside provider', async () => {
   spy.mockRestore();
   expect(captured).not.toBeNull();
   expect(captured!.message).toMatch(/useBackend must be used within BackendProvider/);
+});
+
+test('refresh sets health from pingHealth', async () => {
+  (techan.pingHealth as jest.Mock).mockResolvedValue(true);
+  let latest: any = null;
+  await act(async () => {
+    ReactTestRenderer.create(
+      <BackendProvider>
+        <Probe onReady={v => (latest = v)} />
+      </BackendProvider>,
+    );
+  });
+  await act(async () => {
+    await latest.refresh();
+  });
+  expect(latest.health).toBe('up');
+
+  (techan.pingHealth as jest.Mock).mockResolvedValue(false);
+  await act(async () => {
+    await latest.refresh();
+  });
+  expect(latest.health).toBe('down');
 });

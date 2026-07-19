@@ -76,7 +76,7 @@ function App() {
       <SafeAreaProvider>
         <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
         <AccountProvider>
-          <BackendProvider>
+          <BackendProvider poll>
             <NavigationContainer>
               <Drawer.Navigator
                 screenOptions={{
