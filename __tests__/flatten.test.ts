@@ -1,5 +1,5 @@
 // __tests__/flatten.test.ts
-import { flattenPlan, submitFlatten, finishExit, type SymbolHolding } from '../src/flatten';
+import { flattenPlan, submitFlatten, finishExit, holdingsForSymbol, type SymbolHolding } from '../src/flatten';
 import * as alpaca from '../src/alpaca';
 import type { Account, AlpacaPosition } from '../src/alpaca';
 
@@ -59,4 +59,14 @@ test('finishExit never lets a throwing suppress affect the flatten result', asyn
   const out = await finishExit(legs, 'AAPL', submit, suppress);
   expect(out.allOk).toBe(true); // flatten still authoritative
   expect(out.suppressed).toBe(false); // suppress failed, swallowed
+});
+
+test('holdingsForSymbol isolates a rejecting account and returns only holders', async () => {
+  (alpaca.listPositions as jest.Mock)
+    .mockRejectedValueOnce(new Error('account down'))
+    .mockResolvedValueOnce([held('AAPL', '50', 'long')]);
+  const out = await holdingsForSymbol([ira, paper], 'AAPL');
+  expect(out).toHaveLength(1);
+  expect(out[0].account.id).toBe('p'); // paper
+  expect(out[0].position.symbol).toBe('AAPL');
 });
