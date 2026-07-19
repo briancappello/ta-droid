@@ -17,7 +17,6 @@ import {
   bucketByAccount,
   filterByStrategies,
   strategiesPresent,
-  stubTagger,
   tagAll,
   type Tagged,
 } from '../book';
@@ -26,6 +25,7 @@ import {
   listPositions,
   type AlpacaPosition,
 } from '../alpaca';
+import { loadTagger } from '../strategyTagger';
 
 function formatMoney(value: string): string {
   const n = Number(value);
@@ -71,7 +71,8 @@ function PositionsScreen({ navigation }: { navigation: any }) {
       return { account, items: [] as AlpacaPosition[] };
     });
     setError(firstError);
-    setTagged(tagAll(perAccount, stubTagger<AlpacaPosition>()));
+    const strategyOf = await loadTagger();
+    setTagged(tagAll(perAccount, strategyOf));
     setLoading(false);
   }, [accounts]);
 

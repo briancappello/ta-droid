@@ -17,7 +17,6 @@ import {
   bucketByAccount,
   filterByStrategies,
   strategiesPresent,
-  stubTagger,
   tagAll,
   type Tagged,
 } from '../book';
@@ -26,6 +25,7 @@ import {
   listOpenOrders,
   type AlpacaOrder,
 } from '../alpaca';
+import { loadTagger } from '../strategyTagger';
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -60,7 +60,8 @@ function OrdersScreen({ navigation }: { navigation: any }) {
       return { account, items: [] as AlpacaOrder[] };
     });
     setError(firstError);
-    setTagged(tagAll(perAccount, stubTagger<AlpacaOrder>()));
+    const strategyOf = await loadTagger();
+    setTagged(tagAll(perAccount, strategyOf));
     setLoading(false);
   }, [accounts]);
 

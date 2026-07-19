@@ -9,6 +9,9 @@ import * as alpaca from '../src/alpaca';
 jest.mock('../src/AccountContext');
 jest.mock('../src/BackendContext');
 jest.mock('../src/alpaca');
+jest.mock('../src/strategyTagger', () => ({
+  loadTagger: async () => () => 'Unattributed',
+}));
 
 const nav = { navigate: jest.fn(), openDrawer: jest.fn(), addListener: undefined } as any;
 
