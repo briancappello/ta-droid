@@ -15,6 +15,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import PositionsScreen from './src/screens/PositionsScreen';
 import OrdersScreen from './src/screens/OrdersScreen';
 import WatchlistsScreen from './src/screens/WatchlistsScreen';
+import ChartScreen from './src/screens/ChartScreen';
+import OrderEntryScreen from './src/screens/OrderEntryScreen';
+import ExitScreen from './src/screens/ExitScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import BackendSettingsScreen from './src/screens/BackendSettingsScreen';
 import AccountsScreen from './src/screens/AccountsScreen';
@@ -22,10 +25,7 @@ import { AccountProvider } from './src/AccountContext';
 import { BackendProvider } from './src/BackendContext';
 import type { AlpacaOrder } from './src/alpaca';
 
-// RootStackParamList is exported now (an exported type is never an
-// unused-var lint error) and consumed by the ChartStack added in Task 11.
-// ChartScreen/OrderEntryScreen/ExitScreen are NOT imported here in Phase 1 —
-// importing an unused value WOULD fail `npm run lint`. Task 11 re-adds them.
+// Consumed by the ChartStack (below) — Chart/OrderEntry/Exit routes.
 export type RootStackParamList = {
   Chart: { ticker: string };
   OrderEntry: { accountId?: string; symbol?: string; order?: AlpacaOrder };
@@ -43,10 +43,22 @@ export type RootDrawerParamList = {
   Orders: undefined;
   Watchlists: undefined;
   SettingsStack: undefined;
+  ChartStack: undefined;
 };
 
 const Drawer = createDrawerNavigator<RootDrawerParamList>();
 const SettingsNav = createNativeStackNavigator<SettingsStackParamList>();
+const ChartNav = createNativeStackNavigator<RootStackParamList>();
+
+function ChartStack() {
+  return (
+    <ChartNav.Navigator screenOptions={{ headerShown: false }}>
+      <ChartNav.Screen name="Chart" component={ChartScreen} />
+      <ChartNav.Screen name="OrderEntry" component={OrderEntryScreen} />
+      <ChartNav.Screen name="Exit" component={ExitScreen} />
+    </ChartNav.Navigator>
+  );
+}
 
 function SettingsStack() {
   return (
@@ -81,6 +93,11 @@ function App() {
                   name="SettingsStack"
                   component={SettingsStack}
                   options={{ title: 'Settings' }}
+                />
+                <Drawer.Screen
+                  name="ChartStack"
+                  component={ChartStack}
+                  options={{ drawerItemStyle: { display: 'none' } }}
                 />
               </Drawer.Navigator>
             </NavigationContainer>
