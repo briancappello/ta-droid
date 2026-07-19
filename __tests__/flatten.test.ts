@@ -2,12 +2,14 @@
 import { flattenPlan, submitFlatten, finishExit, holdingsForSymbol, type SymbolHolding } from '../src/flatten';
 import * as alpaca from '../src/alpaca';
 import type { Account, AlpacaPosition } from '../src/alpaca';
+import { postExitSuppress } from '../src/techan';
 
 jest.mock('../src/alpaca', () => ({
   ...jest.requireActual('../src/alpaca'),
   createOrder: jest.fn(),
   listPositions: jest.fn(),
 }));
+jest.mock('../src/techan');
 
 const ira: Account = { id: 'i', name: 'IRA', key: 'K', secret: 'S', env: 'live' };
 const paper: Account = { id: 'p', name: 'Paper', key: 'K', secret: 'S', env: 'paper' };
@@ -59,6 +61,16 @@ test('finishExit never lets a throwing suppress affect the flatten result', asyn
   const out = await finishExit(legs, 'AAPL', submit, suppress);
   expect(out.allOk).toBe(true); // flatten still authoritative
   expect(out.suppressed).toBe(false); // suppress failed, swallowed
+});
+
+test('finishExit with real postExitSuppress: backend down leaves flatten authoritative', async () => {
+  (postExitSuppress as jest.Mock).mockResolvedValue(false); // backend down
+  const legs = flattenPlan([{ account: ira, position: held('AAPL', '100', 'long') }]);
+  const submit = jest.fn().mockResolvedValue([{ leg: legs[0], ok: true }]);
+  const out = await finishExit(legs, 'AAPL', submit, postExitSuppress);
+  expect(out.allOk).toBe(true);
+  expect(out.suppressed).toBe(false);
+  expect(postExitSuppress).toHaveBeenCalledWith('AAPL', ['i']);
 });
 
 test('holdingsForSymbol isolates a rejecting account and returns only holders', async () => {

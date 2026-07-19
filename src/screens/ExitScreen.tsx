@@ -22,10 +22,7 @@ import {
   type SymbolHolding,
 } from '../flatten';
 import type { OrderType } from '../alpaca';
-
-// ponytail: real fa-techan suppress lands in Task 19 by swapping this for
-// postExitSuppress. finishExit already guarantees best-effort/never-blocks.
-const noopSuppress = async (): Promise<boolean> => false;
+import { postExitSuppress } from '../techan';
 
 const TYPES: { label: string; value: OrderType }[] = [
   { label: 'Market', value: 'market' },
@@ -96,7 +93,7 @@ export default function ExitScreen({
       legs,
       symbol,
       submitFlatten,
-      noopSuppress,
+      postExitSuppress,
     );
     setPending(false);
     if (allOk) {
