@@ -13,6 +13,7 @@ import type { RootStackParamList } from '../../App';
 import { fetchHistory, type HistoryResponse } from '../api';
 import { LIGHTWEIGHT_CHARTS_JS } from '../vendor/lightweightCharts';
 import { useAccounts } from '../AccountContext';
+import { holdingsForSymbol, type SymbolHolding } from '../flatten';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Chart'>;
 
@@ -586,12 +587,23 @@ function FreqDropdown({
 
 export default function ChartScreen({ route, navigation }: Props) {
   const { ticker } = route.params;
-  const { activeId } = useAccounts();
+  const { accounts, activeId } = useAccounts();
   const [rangeIndex, setRangeIndex] = useState(4); // default 1Y
   const [freq, setFreq] = useState('D');
   const [html, setHtml] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [holdings, setHoldings] = useState<SymbolHolding[]>([]);
+
+  // ponytail: holdingsForSymbol re-fetches every account's full position list on
+  // each ticker change, with no shared cache between PositionsScreen and this
+  // screen. Fine at single-user scale; add a shared positions cache if
+  // chart-hopping volume makes the redundant Alpaca calls matter.
+  useEffect(() => {
+    holdingsForSymbol(accounts, ticker)
+      .then(setHoldings)
+      .catch(e => console.warn('[ChartScreen] holdings:', e.message));
+  }, [accounts, ticker]);
 
   const activeRange = useMemo(() => RANGES[rangeIndex], [rangeIndex]);
 
@@ -643,6 +655,14 @@ export default function ChartScreen({ route, navigation }: Props) {
           selected={freq}
           onSelect={setFreq}
         />
+        {holdings.length > 0 && (
+          <TouchableOpacity
+            style={styles.exitButton}
+            onPress={() => navigation.navigate('Exit', { symbol: ticker })}
+          >
+            <Text style={styles.exitButtonText}>Exit</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.tradeButton}
           onPress={() =>
@@ -655,6 +675,30 @@ export default function ChartScreen({ route, navigation }: Props) {
           <Text style={styles.tradeButtonText}>Trade</Text>
         </TouchableOpacity>
       </View>
+      {holdings.length > 0 && (
+        <View style={styles.posStrip}>
+          {holdings.map(h => {
+            const pl = Number(h.position.unrealized_pl);
+            return (
+              <View key={h.account.id} style={styles.posPill}>
+                <Text style={styles.posPillText}>
+                  {h.account.name} · {h.position.qty} @{' '}
+                  {h.position.avg_entry_price}
+                </Text>
+                <Text
+                  style={[
+                    styles.posPillPl,
+                    { color: pl >= 0 ? '#4caf50' : '#f44336' },
+                  ]}
+                >
+                  {pl >= 0 ? '+' : ''}
+                  {h.position.unrealized_pl}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
       {error ? (
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
@@ -715,6 +759,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#2196f3',
   },
   tradeButtonText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  exitButton: {
+    marginLeft: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    backgroundColor: '#f44336',
+  },
+  exitButtonText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  posStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    backgroundColor: '#16213e',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  posPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1a2e',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 4,
+    margin: 3,
+    gap: 6,
+  },
+  posPillText: { color: '#ccc', fontSize: 12 },
+  posPillPl: { fontSize: 12, fontWeight: '600' },
   pillText: {
     color: '#888',
     fontSize: 12,
