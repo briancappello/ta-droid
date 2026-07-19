@@ -14,7 +14,7 @@ export function strategyLabel(selection: StrategySelection): string {
   return `${selection.length} strategies`;
 }
 
-function toggle(
+export function toggle(
   selection: StrategySelection,
   option: string,
   options: string[],
