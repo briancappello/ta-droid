@@ -30,9 +30,12 @@ export default function AccountsScreen({ navigation }: { navigation: any }) {
           keyExtractor={a => a.id}
           renderItem={({ item }) => (
             <View style={styles.row}>
-              <Text style={styles.rowName}>{item.name}</Text>
+              <Text style={styles.rowName}>
+                {item.name}{' '}
+                {item.is_paper && <Text style={styles.paper}>paper</Text>}
+              </Text>
               <Text style={styles.rowSub}>
-                {item.is_paper ? 'PAPER' : 'LIVE'} · ••••{item.key.slice(-4)}
+                {item.id} · ••••{item.key.slice(-4)}
               </Text>
             </View>
           )}
@@ -61,5 +64,6 @@ const styles = StyleSheet.create({
     borderBottomColor: '#2a2a4a',
   },
   rowName: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  paper: { color: '#8a97b0', fontSize: 12, fontWeight: '400' },
   rowSub: { color: '#999', fontSize: 12, marginTop: 2 },
 });
