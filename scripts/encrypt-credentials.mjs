@@ -33,7 +33,8 @@ export async function encryptCredentials(passphrase, credsArray) {
 // CLI: node scripts/encrypt-credentials.mjs <passphrase> [inPath] [outPath]
 // Reads plaintext creds JSON array from inPath (default credentials.local.json),
 // writes the blob JSON to outPath (default android/app/src/main/assets/credentials.enc.json
-// — a path the build injects; final path settled in C3).
+// — a path the build injects; final path settled in C3), and prints the
+// ready-to-paste `CREDENTIALS_BLOB_JSON=...` line for the operator's `.env`.
 // ponytail: async IIFE (not top-level await) so babel-jest's CJS transform of
 // this .mjs doesn't reject it; the CLI guard is never run under jest anyway.
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -48,5 +49,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     writeFileSync(outPath, JSON.stringify(blob, null, 2));
     // ponytail: never log the passphrase or plaintext creds.
     console.log(`wrote ${outPath} (fingerprint ${blob.fingerprint.slice(0, 12)}…)`);
+    console.log(`CREDENTIALS_BLOB_JSON=${JSON.stringify(blob)}`);
   })();
 }
