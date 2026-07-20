@@ -72,13 +72,15 @@ async function alpacaRequest<T>(
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   let response: Response;
   try {
-    response = await fetch(`${hostFor(account)}${path}`, {
+    // ponytail: RN's RequestInit type omits `redirect`, so widen locally to keep it type-checked.
+    const fetchInit: RequestInit & { redirect?: 'error' | 'follow' | 'manual' } = {
       method: init.method,
       headers: alpacaHeaders(account),
       body: init.body != null ? JSON.stringify(init.body) : undefined,
       redirect: 'error', // never follow a 3xx off-host with the secret headers
       signal: controller.signal,
-    });
+    };
+    response = await fetch(`${hostFor(account)}${path}`, fetchInit);
   } catch (e) {
     if (e instanceof Error && e.name === 'AbortError') {
       throw new AlpacaError(0, 'Alpaca request timed out.');
