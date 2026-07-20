@@ -13,7 +13,7 @@
 3. Support **multiple brokers** via a pluggable driver layer (Alpaca is the first driver; adding a second is additive, not a rewrite).
 4. Move account configuration to **build time** (single-user, self-packaged app) while keeping **secrets out of git and out of plaintext in the APK**, via passphrase-encrypted credentials provisioned into the Android Keystore.
 
-Non-goals (explicit YAGNI): a closed/history orders UI (interface only), a broker-neutral domain type for positions/orders (keep Alpaca shapes), any runtime add/edit/delete account flow.
+Non-goals (explicit YAGNI): a closed/history orders UI (interface only), a broker-neutral domain type for positions/orders (keep Alpaca shapes), any runtime add/edit/delete account flow, and the **strategy-override** resource (§6.3 — a separate future effort; this effort only *removes* the mis-modeled exit-suppress that it supersedes).
 
 ---
 
@@ -53,7 +53,13 @@ interface Account {
 ```
 
 `env: 'paper' | 'live'` is **removed** from the shared model. Paper/live is now
-`account.is_paper`, consumed only inside the driver.
+`account.is_paper`, consumed inside the driver for routing.
+
+**UI exposure:** `is_paper` is also surfaced to the user as a **"paper" badge
+when `true`**. When `false`, the account is **live** and shows **no badge** —
+live is the unflagged default. This replaces the old `(paper)`/`(live)` text in
+AccountsScreen, the Positions/Orders per-account bucket headers, and the chart
+positions strip: render a paper badge iff `is_paper`, otherwise nothing.
 
 ### 2.3 Driver interface
 
@@ -197,29 +203,62 @@ config (non-secret) + Keystore (creds).
 | `src/accounts.ts` | Config from build-time `react-native-config` (non-secret) + Keystore (creds). Drops runtime add/edit/delete and on-device `newId()`. `Account` gains `broker`/`is_paper`; `id` = broker account number. |
 | `src/provisioning.ts` (new) | Fingerprint check + passphrase → decrypt → Keystore flow (libsodium). |
 | `src/AccountContext.tsx` | Loads accounts from config + Keystore; provisioning gate (§4.5). |
-| `src/flatten.ts` | `listPositions`/`createOrder` via `driverFor(account)`. `NewOrderRequest` from `broker.ts`. |
+| `src/flatten.ts` | `listPositions`/`createOrder` via `driverFor(account)`. `NewOrderRequest` from `broker.ts`. **Remove the `suppress` argument + best-effort-suppress logic from `finishExit`** (§6.1) — it collapses to: submit flatten legs → `{ results, allOk }`. |
+| `src/techan.ts` | **Remove `postExitSuppress`** (and its type). The fa-techan client is now purely read enrichment: `pingHealth`, `fetchStrategyPositions`, `fetchWatchlists`, `fetchWatchlistSymbols`. |
 | `PositionsScreen` | Resolve driver; `listPositions` via driver. |
 | `OrdersScreen` | Resolve driver; `listOrders(account, { status: 'open' })`. No visible change. |
 | `ChartScreen` | `holdingsForSymbol`/order entry via driver (through `flatten.ts`/driver). |
-| `ExitScreen` | Flatten via driver (through `flatten.ts`). |
-| `AccountsScreen` | **Read-only** list: name, broker, paper/live badge, account id. No add/edit/delete, no provisioning button (provisioning is automatic). |
+| `ExitScreen` | Flatten via driver (through `flatten.ts`). **Remove `postExitSuppress` wiring** — the exit hot-path places Alpaca orders only, tells fa-techan nothing. |
+| `AccountsScreen` | **Read-only** list: name, broker, **paper badge iff `is_paper`** (live = no badge), account id. No add/edit/delete, no provisioning button (provisioning is automatic). |
 | `src/strategyTagger.ts` | Join key → `${broker}:${account.id}:${symbol}`. |
-| Tests | Repoint `../alpaca` fn mocks to the driver; account fixtures gain `broker`/`is_paper`, drop `env`. Add provisioning + broker-registry + `listOrders` filter tests. |
+| Tests | Repoint `../alpaca` fn mocks to the driver; account fixtures gain `broker`/`is_paper`, drop `env`. Add provisioning + broker-registry + `listOrders` filter tests. **Drop the `finishExit`-suppress and `postExitSuppress` tests** (§6.1); keep flatten-plan/submit tests. |
 
 ---
 
 ## 6. fa-techan contract update
 
-Join key becomes **`(broker_id, account_id, symbol)`** (was `account_id, symbol`).
+### 6.1 Delete `POST /exits`; exits are just Alpaca orders
+
+**Alpaca is the sole order-placement path.** Going flat is just placing
+market-close orders via `createOrder` through the driver — to fa-techan it is
+not a distinct event. The exit "hot path" is a **FE-only UX concept**; it tells
+the backend nothing.
+
+Therefore:
+- **`POST /exits` is deleted** from the contract entirely.
+- **`postExitSuppress` and the whole suppress seam are removed** from the FE
+  (`techan.ts`, `finishExit` in `flatten.ts`, `ExitScreen` — see §5). This
+  reverts the earlier "best-effort suppress on Exit" work, which was built
+  against a now-incorrect contract assumption.
+- The failsafe model is **unchanged and reaffirmed**: fa-techan remains
+  **read-only enrichment** (health, strategies, watchlists) and is never in the
+  order/write path.
+
+### 6.2 Join key becomes `(broker_id, account_id, symbol)`
 
 - `GET /strategies/positions` rows: `{ broker_id, account_id, symbol, strategy }`.
-- `POST /exits` body: `{ broker_id, symbol, account_ids: string[] }` — where
-  `account_ids` are broker account numbers **for that `broker_id`**. (If a single
-  flatten ever spans multiple brokers, the FE sends one POST per broker so each
-  payload is unambiguous.)
 - Tagger joins on `${broker}:${account.id}:${symbol}`.
-- Update `docs/superpowers/contracts/fe-fa-techan-contract.md` §4.2, §4.5, and
-  resolve §6.1 (join key = broker id + broker account number).
+- Update `docs/superpowers/contracts/fe-fa-techan-contract.md`: delete the
+  `POST /exits` endpoint (§4.5) and its references (§1, §5, §7); update
+  `/strategies/positions` (§4.2) to carry `broker_id`; resolve §6.1 (join key =
+  broker id + broker account number).
+
+### 6.3 Deferred: strategy overrides (NOT built in this effort)
+
+The concern `/exits` was really trying to solve — "don't let the strategy
+engine act on this symbol" — is broader than exits and belongs to a future
+**strategy-override** resource:
+
+- A per-**`(strategy, symbol, date)`** rule telling the strategy engine to **not
+  act** on a symbol. Covers both "don't re-enter after I manually flattened" and
+  "never enter this symbol today."
+- **Date semantics: effective-for a single calendar date** (day-scoped). A
+  flatten-exit would write an override for `(strategy, symbol, today)`; a
+  pre-emptive block writes one for a chosen date.
+- It is **fa-techan config/enrichment** the *strategy engine* consults — NOT part
+  of the Alpaca order path, so the failsafe model still holds.
+- Its endpoint(s), verbs, and FE client/UI are a **separate design + plan**.
+  Recorded here only so the dropped concern is not lost.
 
 ---
 
@@ -248,4 +287,5 @@ Join key becomes **`(broker_id, account_id, symbol)`** (was `account_id, symbol`
 - Whether the neutral payload types get their own module or re-export from
   `broker.ts` (leaning re-export from `broker.ts`).
 - Migration ordering (broker layer + types first, then provisioning, then
-  consumer repointing, then contract/tagger) — for the implementation plan.
+  consumer repointing, then suppress removal + contract/tagger) — for the
+  implementation plan.
