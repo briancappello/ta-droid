@@ -1,8 +1,8 @@
 // src/accounts.ts
 import * as Keychain from 'react-native-keychain';
-import type { Account, AlpacaEnv } from './alpaca';
+import type { Account } from './alpaca';
 
-export type AccountMeta = { id: string; name: string; env: AlpacaEnv };
+export type AccountMeta = { id: string; name: string; is_paper: boolean; broker: 'alpaca' };
 
 const META_SERVICE = 'alpaca.accounts.meta';
 const secretService = (id: string) => `alpaca.account.${id}`;
@@ -42,7 +42,8 @@ export async function loadAccounts(): Promise<Account[]> {
     accounts.push({
       id: m.id,
       name: m.name,
-      env: m.env,
+      broker: m.broker,
+      is_paper: m.is_paper,
       key: secret.username,
       secret: secret.password,
     });
@@ -54,16 +55,16 @@ export async function addAccount(input: {
   name: string;
   key: string;
   secret: string;
-  env: AlpacaEnv;
+  is_paper: boolean;
 }): Promise<Account> {
   const id = newId();
   await Keychain.setGenericPassword(input.key, input.secret, {
     service: secretService(id),
   });
   const meta = await loadMeta();
-  meta.push({ id, name: input.name, env: input.env });
+  meta.push({ id, name: input.name, broker: 'alpaca', is_paper: input.is_paper });
   await saveMeta(meta);
-  return { id, name: input.name, env: input.env, key: input.key, secret: input.secret };
+  return { id, name: input.name, broker: 'alpaca', is_paper: input.is_paper, key: input.key, secret: input.secret };
 }
 
 export async function updateAccount(account: Account): Promise<void> {
@@ -72,7 +73,7 @@ export async function updateAccount(account: Account): Promise<void> {
   });
   const meta = await loadMeta();
   const idx = meta.findIndex(m => m.id === account.id);
-  const next = { id: account.id, name: account.name, env: account.env };
+  const next: AccountMeta = { id: account.id, name: account.name, broker: 'alpaca', is_paper: account.is_paper };
   if (idx >= 0) {
     meta[idx] = next;
   } else {

@@ -36,7 +36,7 @@ test('addAccount persists and loadAccounts returns it with secrets', async () =>
     name: 'Paper',
     key: 'PKEY',
     secret: 'PSECRET',
-    env: 'paper',
+    is_paper: true,
   });
   expect(created.id).toBeTruthy();
   const loaded = await loadAccounts();
@@ -45,27 +45,27 @@ test('addAccount persists and loadAccounts returns it with secrets', async () =>
     name: 'Paper',
     key: 'PKEY',
     secret: 'PSECRET',
-    env: 'paper',
+    is_paper: true,
   });
 });
 
 test('the metadata blob never contains secrets', async () => {
-  await addAccount({ name: 'IRA', key: 'LKEY', secret: 'LSECRET', env: 'live' });
+  await addAccount({ name: 'IRA', key: 'LKEY', secret: 'LSECRET', is_paper: false });
   const metaBlob = store['alpaca.accounts.meta'].password;
   expect(metaBlob).not.toContain('LKEY');
   expect(metaBlob).not.toContain('LSECRET');
 });
 
-test('updateAccount changes name/env and secrets', async () => {
+test('updateAccount changes name/is_paper and secrets', async () => {
   const a = await addAccount({
     name: 'Old',
     key: 'K',
     secret: 'S',
-    env: 'paper',
+    is_paper: true,
   });
-  await updateAccount({ ...a, name: 'New', env: 'live', secret: 'S2' });
+  await updateAccount({ ...a, name: 'New', is_paper: false, secret: 'S2' });
   const loaded = await loadAccounts();
-  expect(loaded[0]).toMatchObject({ name: 'New', env: 'live', secret: 'S2' });
+  expect(loaded[0]).toMatchObject({ name: 'New', is_paper: false, secret: 'S2' });
 });
 
 test('deleteAccount removes meta and secret entry', async () => {
@@ -73,7 +73,7 @@ test('deleteAccount removes meta and secret entry', async () => {
     name: 'Temp',
     key: 'K',
     secret: 'S',
-    env: 'paper',
+    is_paper: true,
   });
   await deleteAccount(a.id);
   expect(await loadAccounts()).toHaveLength(0);

@@ -12,17 +12,17 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAccounts } from '../AccountContext';
 import { addAccount, updateAccount, deleteAccount } from '../accounts';
-import type { Account, AlpacaEnv } from '../alpaca';
+import type { Account } from '../alpaca';
 
 type Draft = {
   id: string | null;
   name: string;
   key: string;
   secret: string;
-  env: AlpacaEnv;
+  is_paper: boolean;
 };
 
-const EMPTY_DRAFT: Draft = { id: null, name: '', key: '', secret: '', env: 'paper' };
+const EMPTY_DRAFT: Draft = { id: null, name: '', key: '', secret: '', is_paper: true };
 
 export default function AccountsScreen({ navigation }: { navigation: any }) {
   const insets = useSafeAreaInsets();
@@ -35,7 +35,7 @@ export default function AccountsScreen({ navigation }: { navigation: any }) {
     setModalVisible(true);
   };
   const openEdit = (a: Account) => {
-    setDraft({ id: a.id, name: a.name, key: a.key, secret: a.secret, env: a.env });
+    setDraft({ id: a.id, name: a.name, key: a.key, secret: a.secret, is_paper: a.is_paper });
     setModalVisible(true);
   };
 
@@ -50,14 +50,15 @@ export default function AccountsScreen({ navigation }: { navigation: any }) {
         name: draft.name.trim(),
         key: draft.key.trim(),
         secret: draft.secret.trim(),
-        env: draft.env,
+        broker: 'alpaca',
+        is_paper: draft.is_paper,
       });
     } else {
       await addAccount({
         name: draft.name.trim(),
         key: draft.key.trim(),
         secret: draft.secret.trim(),
-        env: draft.env,
+        is_paper: draft.is_paper,
       });
     }
     await reload();
@@ -101,7 +102,7 @@ export default function AccountsScreen({ navigation }: { navigation: any }) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowName}>{item.name}</Text>
                 <Text style={styles.rowSub}>
-                  {item.env.toUpperCase()} · ••••{item.key.slice(-4)}
+                  {item.is_paper ? 'PAPER' : 'LIVE'} · ••••{item.key.slice(-4)}
                 </Text>
               </View>
               <TouchableOpacity onPress={() => remove(item)}>
@@ -142,22 +143,26 @@ export default function AccountsScreen({ navigation }: { navigation: any }) {
               onChangeText={t => setDraft(d => ({ ...d, secret: t }))}
             />
             <View style={styles.envRow}>
-              {(['paper', 'live'] as AlpacaEnv[]).map(e => (
-                <TouchableOpacity
-                  key={e}
-                  style={[styles.envBtn, draft.env === e && styles.envBtnActive]}
-                  onPress={() => setDraft(d => ({ ...d, env: e }))}
+              <TouchableOpacity
+                style={[styles.envBtn, draft.is_paper && styles.envBtnActive]}
+                onPress={() => setDraft(d => ({ ...d, is_paper: true }))}
+              >
+                <Text
+                  style={[styles.envText, draft.is_paper && styles.envTextActive]}
                 >
-                  <Text
-                    style={[
-                      styles.envText,
-                      draft.env === e && styles.envTextActive,
-                    ]}
-                  >
-                    {e.toUpperCase()}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                  PAPER
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.envBtn, !draft.is_paper && styles.envBtnActive]}
+                onPress={() => setDraft(d => ({ ...d, is_paper: false }))}
+              >
+                <Text
+                  style={[styles.envText, !draft.is_paper && styles.envTextActive]}
+                >
+                  LIVE
+                </Text>
+              </TouchableOpacity>
             </View>
             <View style={styles.modalButtons}>
               <TouchableOpacity onPress={() => setModalVisible(false)}>

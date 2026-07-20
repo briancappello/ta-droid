@@ -9,8 +9,8 @@ import * as Keychain from 'react-native-keychain';
 jest.mock('react-native-keychain');
 jest.mock('../src/accounts');
 
-const A = { id: 'a', name: 'Paper', key: 'K', secret: 'S', env: 'paper' as const };
-const B = { id: 'b', name: 'IRA', key: 'K2', secret: 'S2', env: 'live' as const };
+const A = { id: 'a', name: 'Paper', key: 'K', secret: 'S', broker: 'alpaca' as const, is_paper: true };
+const B = { id: 'b', name: 'IRA', key: 'K2', secret: 'S2', broker: 'alpaca' as const, is_paper: false };
 
 function Probe({ onReady }: { onReady: (v: ReturnType<typeof useAccounts>) => void }) {
   const v = useAccounts();

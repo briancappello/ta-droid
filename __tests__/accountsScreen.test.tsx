@@ -12,7 +12,7 @@ jest.mock('react-native-safe-area-context', () => ({
 test('renders the accounts list from context', async () => {
   (ctx.useAccounts as jest.Mock).mockReturnValue({
     accounts: [
-      { id: 'a', name: 'Paper', key: 'ABCD1234', secret: 'S', env: 'paper' },
+      { id: 'a', name: 'Paper', key: 'ABCD1234', secret: 'S', broker: 'alpaca', is_paper: true },
     ],
     activeId: 'a',
     activeAccount: null,

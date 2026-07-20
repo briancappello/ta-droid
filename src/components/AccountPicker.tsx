@@ -10,7 +10,7 @@ import {
 import type { Account } from '../alpaca';
 
 function label(a: Account): string {
-  return `${a.name} · ${a.env.toUpperCase()}`;
+  return `${a.name}${a.is_paper ? ' · PAPER' : ''}`;
 }
 
 export function AccountPicker({
