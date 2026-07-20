@@ -17,21 +17,25 @@ import {
   type OrderFormValues,
 } from '../orderValidation';
 import {
-  createOrder,
   replaceOrder,
   AlpacaError,
   type Account,
-  type AlpacaOrder,
+  type ReplaceOrderRequest,
+} from '../alpaca';
+// ponytail: replace stays Alpaca-specific (BrokerClient omits it) until a
+// second broker needs order replacement; create routes through the driver.
+import {
+  driverFor,
+  type Order,
   type OrderSide,
   type OrderType,
-  type ReplaceOrderRequest,
   type TimeInForce,
-} from '../alpaca';
+} from '../broker';
 
 type RouteParams = {
   accountId?: string;
   symbol?: string;
-  order?: AlpacaOrder;
+  order?: Order;
 };
 
 type Props = {
@@ -146,7 +150,7 @@ export default function OrderEntryScreen({ route, navigation }: Props) {
         }
         await replaceOrder(account, params.order.id, req);
       } else {
-        await createOrder(account, toNewOrderRequest(values));
+        await driverFor(account).createOrder(account, toNewOrderRequest(values));
       }
       setReviewVisible(false);
       Alert.alert('Order submitted');

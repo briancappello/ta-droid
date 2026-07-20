@@ -20,11 +20,8 @@ import {
   tagAll,
   type Tagged,
 } from '../book';
-import {
-  AlpacaError,
-  listPositions,
-  type AlpacaPosition,
-} from '../alpaca';
+import { AlpacaError } from '../alpaca';
+import { driverFor, type Position } from '../broker';
 import { loadTagger } from '../strategyTagger';
 
 function formatMoney(value: string): string {
@@ -44,14 +41,14 @@ function formatMoney(value: string): string {
 
 function PositionsScreen({ navigation }: { navigation: any }) {
   const { accounts } = useAccounts();
-  const [tagged, setTagged] = useState<Tagged<AlpacaPosition>[]>([]);
+  const [tagged, setTagged] = useState<Tagged<Position>[]>([]);
   const [selection, setSelection] = useState<StrategySelection>('all');
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
     const results = await Promise.allSettled(
-      accounts.map(a => listPositions(a)),
+      accounts.map(a => driverFor(a).listPositions(a)),
     );
     let firstError: string | null = null;
     const perAccount = accounts.map((account, i) => {
@@ -66,7 +63,7 @@ function PositionsScreen({ navigation }: { navigation: any }) {
         firstError = message;
       }
       console.warn('Positions fetch failed:', message);
-      return { account, items: [] as AlpacaPosition[] };
+      return { account, items: [] as Position[] };
     });
     setError(firstError);
     const strategyOf = await loadTagger();
@@ -142,9 +139,9 @@ function PositionsScreen({ navigation }: { navigation: any }) {
               <View style={styles.bucketHeader}>
                 <Text style={styles.bucketName}>
                   {bucket.account.name}{' '}
-                  <Text style={styles.env}>
-                    ({bucket.account.env})
-                  </Text>
+                  {bucket.account.is_paper && (
+                    <Text style={styles.paper}>paper</Text>
+                  )}
                 </Text>
                 <Text style={[styles.bucketPl, { color: plColor }]}>
                   {formatMoney(String(pl))}
@@ -207,7 +204,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   bucketName: { color: '#e6ecf5', fontSize: 15, fontWeight: '700' },
-  env: { color: '#8a97b0', fontSize: 12, fontWeight: '400' },
+  paper: { color: '#8a97b0', fontSize: 12, fontWeight: '400' },
   bucketPl: { fontSize: 14, fontWeight: '700' },
   row: {
     flexDirection: 'row',

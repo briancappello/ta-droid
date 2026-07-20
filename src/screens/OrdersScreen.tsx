@@ -20,11 +20,8 @@ import {
   tagAll,
   type Tagged,
 } from '../book';
-import {
-  AlpacaError,
-  listOpenOrders,
-  type AlpacaOrder,
-} from '../alpaca';
+import { AlpacaError } from '../alpaca';
+import { driverFor, type Order } from '../broker';
 import { loadTagger } from '../strategyTagger';
 
 function capitalize(value: string): string {
@@ -33,14 +30,14 @@ function capitalize(value: string): string {
 
 function OrdersScreen({ navigation }: { navigation: any }) {
   const { accounts } = useAccounts();
-  const [tagged, setTagged] = useState<Tagged<AlpacaOrder>[]>([]);
+  const [tagged, setTagged] = useState<Tagged<Order>[]>([]);
   const [selection, setSelection] = useState<StrategySelection>('all');
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
     const results = await Promise.allSettled(
-      accounts.map(a => listOpenOrders(a)),
+      accounts.map(a => driverFor(a).listOrders(a, { status: 'open' })),
     );
     let firstError: string | null = null;
     const perAccount = accounts.map((account, i) => {
@@ -55,7 +52,7 @@ function OrdersScreen({ navigation }: { navigation: any }) {
         firstError = message;
       }
       console.warn('Orders fetch failed:', message);
-      return { account, items: [] as AlpacaOrder[] };
+      return { account, items: [] as Order[] };
     });
     setError(firstError);
     const strategyOf = await loadTagger();
@@ -125,9 +122,9 @@ function OrdersScreen({ navigation }: { navigation: any }) {
             <View style={styles.bucketHeader}>
               <Text style={styles.bucketName}>
                 {bucket.account.name}{' '}
-                <Text style={styles.env}>
-                  ({bucket.account.env})
-                </Text>
+                {bucket.account.is_paper && (
+                  <Text style={styles.paper}>paper</Text>
+                )}
               </Text>
               <Text style={styles.bucketCount}>
                 {bucket.rows.length} working
@@ -188,7 +185,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   bucketName: { color: '#e6ecf5', fontSize: 15, fontWeight: '700' },
-  env: { color: '#8a97b0', fontSize: 12, fontWeight: '400' },
+  paper: { color: '#8a97b0', fontSize: 12, fontWeight: '400' },
   bucketCount: { color: '#8a97b0', fontSize: 14, fontWeight: '700' },
   row: {
     flexDirection: 'row',

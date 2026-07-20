@@ -11,7 +11,7 @@ jest.mock('../src/flatten');
 jest.mock('../src/api');
 jest.mock('react-native-webview', () => ({ WebView: () => null }));
 
-const account = { id: 'a', name: 'IRA', key: 'K', secret: 'S', env: 'live' as const };
+const account = { id: 'a', name: 'IRA', broker: 'alpaca' as const, is_paper: false, key: 'K', secret: 'S' };
 
 beforeEach(() => {
   (ctx.useAccounts as jest.Mock).mockReturnValue({

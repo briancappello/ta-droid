@@ -6,8 +6,11 @@ import * as ctx from '../src/AccountContext';
 
 jest.mock('../src/AccountContext');
 jest.mock('../src/alpaca');
+// AccountPicker still reads the removed `env` field; B4 repoints it to is_paper.
+// ponytail: stub it here so this screen's test doesn't depend on B4 landing first.
+jest.mock('../src/components/AccountPicker', () => ({ AccountPicker: () => null }));
 
-const account = { id: 'a', name: 'Paper', key: 'K', secret: 'S', env: 'paper' as const };
+const account = { id: 'a', name: 'Paper', broker: 'alpaca' as const, is_paper: true, key: 'K', secret: 'S' };
 
 beforeEach(() => {
   (ctx.useAccounts as jest.Mock).mockReturnValue({
