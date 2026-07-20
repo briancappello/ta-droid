@@ -12,8 +12,9 @@
 2. Use the **broker's own account id** (Alpaca `account_number`) as the primary key for accounts and as the fa-techan join key — replacing the current on-device random id.
 3. Support **multiple brokers** via a pluggable driver layer (Alpaca is the first driver; adding a second is additive, not a rewrite).
 4. Move account configuration to **build time** (single-user, self-packaged app) while keeping **secrets out of git and out of plaintext in the APK**, via passphrase-encrypted credentials provisioned into the Android Keystore.
+5. Keep the hand-rolled Alpaca client but **audit its API contract and REST hygiene against the official `@alpacahq/alpaca-trade-api` SDK** (as a reference, not a dependency — §2.6), including full-fidelity payload types (§2.5).
 
-Non-goals (explicit YAGNI): a closed/history orders UI (interface only), a broker-neutral domain type for positions/orders (keep Alpaca shapes), any runtime add/edit/delete account flow, and the **strategy-override** resource (§6.3 — a separate future effort; this effort only *removes* the mis-modeled exit-suppress that it supersedes).
+Non-goals (explicit YAGNI): a closed/history orders UI (interface only), a broker-neutral domain type for positions/orders (payload types stay Alpaca-shaped, snake_case — §2.5), any runtime add/edit/delete account flow, the **strategy-override** resource (§6.3 — a separate future effort), and **adopting the Alpaca SDK as a runtime dependency** (audit reference only — §2.6).
 
 ---
 
@@ -104,11 +105,59 @@ Consumers resolve a driver via `driverFor(account)` instead of importing
 ### 2.5 Payload types
 
 `AlpacaPosition` / `AlpacaOrder` / `NewOrderRequest` are **renamed** to neutral
-`Position` / `Order` / `NewOrderRequest` with **identical fields** (still
-`avg_entry_price`, `unrealized_pl`, `limit_price`, `status`, `submitted_at`,
-etc.). A future non-Alpaca driver maps its responses into these shapes. This
-keeps `book.ts`, the screens, and `flatten.ts` unchanged apart from imports.
-These types live in `src/broker.ts` and are re-exported for consumers.
+`Position` / `Order` / `NewOrderRequest`, living in `src/broker.ts` and
+re-exported for consumers. A future non-Alpaca driver maps its responses into
+these shapes.
+
+**Full Alpaca-model fidelity (not the current subset).** Today these types
+carry only the handful of fields the UI reads (`avg_entry_price`,
+`unrealized_pl`, `limit_price`, `status`, `submitted_at`, …). The redesigned
+types mirror the **complete** Alpaca Position / Order / order-request models —
+every field, with correct names, types, nullability, and enum values — audited
+against the official SDK's generated models (§2.6). Unused fields are accepted
+surface: these types are the broker contract boundary and should be a faithful,
+single source of truth, not a lossy subset. Field names stay snake_case on the
+type (matching the wire), so `book.ts`/screens/`flatten.ts` change only their
+import path, not field access.
+
+### 2.6 Driver implementation — audited against the official SDK (not a dependency)
+
+Alpaca publishes an official TypeScript SDK, `@alpacahq/alpaca-trade-api`. We
+**do not adopt it as a runtime dependency** — its supported-runtime matrix is
+Node/Bun/Deno/edge/browser (not React Native), and its RN/Hermes compatibility
+is unverified. Our existing hand-rolled `fetch` client works under Hermes and is
+tiny. Instead, the SDK is the **authoritative reference** the hand-rolled Alpaca
+driver is audited against, in two tiers:
+
+**Tier 1 — Alpaca API contract (correctness; must match).** The endpoints,
+HTTP methods, query params, request bodies, and **response payload shapes** are
+verified against the SDK's generated models (which Alpaca derives from its
+pinned OpenAPI specs) and corrected where our hand-rolled client has drifted.
+This is the primary purpose of the audit and the source of truth for §2.5's
+full-fidelity types. Covers at least: `GET /v2/positions`, `GET /v2/orders`
+(incl. `status`/`after`/`until`/`limit` params for `listOrders`),
+`POST /v2/orders` (order-request body + all order types), `DELETE
+/v2/positions/{symbol}`, and the account-number source (`GET /v2/account` →
+`account_number`, used as `Account.id` per §2.2).
+
+**Tier 2 — standard REST-client hygiene (good design; SDK as reference,
+implemented to normal library standards).** Not Alpaca-specific — what any
+competent REST client does:
+- **Redirect guard:** reject 3xx (`redirect: 'error'`-equivalent) so
+  `APCA-API-*` secret headers never follow an off-host redirect (secret-leak
+  guard). *(Our current client lacks this — a real gap to close.)*
+- **Per-request timeout** via `AbortController`.
+- **Retries:** idempotent GETs only; **never** replay order-placement POSTs
+  (dup-order risk). Our client currently doesn't retry at all — keep orders
+  never-retried.
+- **`clientOrderId`** (stable, unique) on `createOrder` for auditability /
+  reconciliation.
+- **Error taxonomy:** preserve/verify the `AlpacaError` status→message mapping
+  (401/403/404/400/422/429) against the SDK's error subclasses.
+
+The SDK also ships a network-free test harness pattern (`createMockAlpaca`) —
+we don't import it, but our driver tests may mirror its route-matching approach
+for offline testing.
 
 ---
 
@@ -199,7 +248,7 @@ config (non-secret) + Keystore (creds).
 | File | Change |
 |---|---|
 | `src/broker.ts` (new) | `BrokerId`, `Broker`, `BrokerClient`, `OrderFilter`, `Position`/`Order`/`NewOrderRequest`, registry, `driverFor`. |
-| `src/alpaca.ts` | Becomes the **Alpaca driver** (`alpacaDriver: BrokerClient`). Keeps `AlpacaError`, header/JSON logic, `messageForStatus`. Host from broker `hosts` + `account.is_paper`. `AlpacaEnv`/`env`/`alpacaBaseUrl(env)` removed/reworked. `listOrders` maps `OrderFilter`→query params. |
+| `src/alpaca.ts` | Becomes the **Alpaca driver** (`alpacaDriver: BrokerClient`). Keeps `AlpacaError`, header/JSON logic, `messageForStatus`. Host from broker `hosts` + `account.is_paper`. `AlpacaEnv`/`env`/`alpacaBaseUrl(env)` removed/reworked. `listOrders` maps `OrderFilter`→query params. **Audited against the official SDK (§2.6):** contract (endpoints + payload shapes) corrected to full fidelity; add redirect-guard, per-request timeout, `clientOrderId` on `createOrder`; keep orders never-retried. |
 | `src/accounts.ts` | Config from build-time `react-native-config` (non-secret) + Keystore (creds). Drops runtime add/edit/delete and on-device `newId()`. `Account` gains `broker`/`is_paper`; `id` = broker account number. |
 | `src/provisioning.ts` (new) | Fingerprint check + passphrase → decrypt → Keystore flow (libsodium). |
 | `src/AccountContext.tsx` | Loads accounts from config + Keystore; provisioning gate (§4.5). |
@@ -267,6 +316,13 @@ engine act on this symbol" — is broader than exits and belongs to a future
 - **Broker layer:** registry resolution (`driverFor`), Alpaca driver host/cred
   routing by `is_paper`, `listOrders` filter→query-param mapping, error mapping
   preserved.
+- **Contract fidelity (§2.6 Tier 1):** driver tests assert the exact
+  endpoint/method/params/body for each call and parse representative Alpaca
+  response payloads into the full-fidelity `Position`/`Order` types (offline,
+  route-matched mocks — mirror the SDK's `createMockAlpaca` approach without
+  importing it). Verify redirect-guard (a 3xx is rejected, not followed),
+  per-request timeout aborts, and `createOrder` never auto-retries + carries a
+  `clientOrderId`.
 - **Provisioning (pure-testable seam):** fingerprint compare logic
   (fresh/changed/equal → provision/re-provision/skip) as a pure function; the
   decrypt→Keystore effect wrapped thinly around it. Passphrase-failure path.
@@ -286,6 +342,11 @@ engine act on this symbol" — is broader than exits and belongs to a future
 - Precise Keystore service-name scheme for creds vs. fingerprint entries.
 - Whether the neutral payload types get their own module or re-export from
   `broker.ts` (leaning re-export from `broker.ts`).
+- The exact SDK version to pin the §2.6 contract audit against
+  (`@alpacahq/alpaca-trade-api` ^4.x at time of writing) and where its generated
+  models are read from (npm package / GitHub) — reference only, not installed.
+- Full-fidelity field list for `Position`/`Order`/`NewOrderRequest` derived from
+  the SDK models (the enumerated fields land at plan/implementation time).
 - Migration ordering (broker layer + types first, then provisioning, then
   consumer repointing, then suppress removal + contract/tagger) — for the
   implementation plan.
