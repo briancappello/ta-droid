@@ -4,7 +4,7 @@ import type {
   OrderSide,
   OrderType,
   TimeInForce,
-} from './alpaca';
+} from './broker';
 
 export type OrderFormValues = {
   symbol: string;

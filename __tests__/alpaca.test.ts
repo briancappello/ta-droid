@@ -1,15 +1,9 @@
 // __tests__/alpaca.test.ts
 import {
   alpacaHeaders,
-  listPositions,
-  type Account,
-} from '../src/alpaca';
-import {
-  listOpenOrders,
-  createOrder,
   replaceOrder,
   cancelOrder,
-  closePosition,
+  type Account,
 } from '../src/alpaca';
 
 const paperAccount: Account = {
@@ -20,14 +14,6 @@ const paperAccount: Account = {
   is_paper: true,
   broker: 'alpaca',
 };
-const liveAccount: Account = {
-  ...paperAccount,
-  id: '2',
-  name: 'IRA',
-  is_paper: false,
-  broker: 'alpaca',
-};
-
 afterEach(() => {
   jest.restoreAllMocks();
 });
@@ -49,59 +35,6 @@ test('alpacaHeaders sets auth headers from account', () => {
   });
 });
 
-test('listPositions calls the env host with auth headers and returns parsed positions', async () => {
-  const spy = mockFetch(200, [
-    { symbol: 'AAPL', qty: '100', avg_entry_price: '189.20' },
-  ]);
-  const result = await listPositions(liveAccount);
-  expect(spy).toHaveBeenCalledWith(
-    'https://api.alpaca.markets/v2/positions',
-    expect.objectContaining({
-      method: 'GET',
-      headers: expect.objectContaining({ 'APCA-API-KEY-ID': 'PKEY' }),
-    }),
-  );
-  expect(result[0].symbol).toBe('AAPL');
-});
-
-test('listPositions throws AlpacaError with a friendly message on 401', async () => {
-  mockFetch(401, { message: 'unauthorized' });
-  await expect(listPositions(paperAccount)).rejects.toMatchObject({
-    status: 401,
-    message: expect.stringContaining('API keys'),
-  });
-});
-
-test('listOpenOrders requests only open orders', async () => {
-  const spy = mockFetch(200, []);
-  await listOpenOrders(paperAccount);
-  expect(spy).toHaveBeenCalledWith(
-    'https://paper-api.alpaca.markets/v2/orders?status=open',
-    expect.objectContaining({ method: 'GET' }),
-  );
-});
-
-test('createOrder POSTs the order body', async () => {
-  const spy = mockFetch(200, { id: 'o1', symbol: 'AAPL' });
-  await createOrder(liveAccount, {
-    symbol: 'AAPL',
-    side: 'buy',
-    type: 'limit',
-    time_in_force: 'day',
-    qty: '10',
-    limit_price: '190',
-  });
-  const [, init] = spy.mock.calls[0];
-  expect(init.method).toBe('POST');
-  expect(JSON.parse(init.body as string)).toMatchObject({
-    symbol: 'AAPL',
-    side: 'buy',
-    type: 'limit',
-    qty: '10',
-    limit_price: '190',
-  });
-});
-
 test('replaceOrder PATCHes to the order id', async () => {
   const spy = mockFetch(200, { id: 'o1' });
   await replaceOrder(paperAccount, 'o1', { qty: '5' });
@@ -116,15 +49,6 @@ test('cancelOrder DELETEs the order id', async () => {
   await cancelOrder(paperAccount, 'o1');
   expect(spy).toHaveBeenCalledWith(
     'https://paper-api.alpaca.markets/v2/orders/o1',
-    expect.objectContaining({ method: 'DELETE' }),
-  );
-});
-
-test('closePosition DELETEs the position symbol', async () => {
-  const spy = mockFetch(200, { id: 'o2' });
-  await closePosition(liveAccount, 'TSLA');
-  expect(spy).toHaveBeenCalledWith(
-    'https://api.alpaca.markets/v2/positions/TSLA',
     expect.objectContaining({ method: 'DELETE' }),
   );
 });

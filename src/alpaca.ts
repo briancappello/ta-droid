@@ -149,24 +149,8 @@ export const alpacaDriver: BrokerClient = {
 // Wire the registry (broker.ts fully initialized `brokers` before this runs).
 brokers.alpaca.driver = alpacaDriver;
 
-// --- Transitional named exports (deleted in Task B6). Keep consumers compiling. ---
-// ponytail: wrap (don't detach `alpacaDriver.method`) so these never depend on
-// `this` binding — cheap insurance for a shim that lives across 3 phases.
-export const listPositions = (a: Account): Promise<Position[]> =>
-  alpacaDriver.listPositions(a);
-export const listOrders = (a: Account, f?: OrderFilter): Promise<Order[]> =>
-  alpacaDriver.listOrders(a, f);
-export const createOrder = (a: Account, req: NewOrderRequest): Promise<Order> =>
-  alpacaDriver.createOrder(a, req);
-export const closePosition = (a: Account, symbol: string): Promise<void> =>
-  alpacaDriver.closePosition(a, symbol);
-
-// listOpenOrders shim: old consumers call it with no filter → open orders.
-export function listOpenOrders(account: Account): Promise<Order[]> {
-  return alpacaDriver.listOrders(account, { status: 'open' });
-}
-
-// replaceOrder / cancelOrder retained for OrderEntryScreen until Phase B.
+// ponytail: replaceOrder/cancelOrder are Alpaca-specific helpers kept until a
+// broker abstraction needs them (BrokerClient omits order replacement).
 export type ReplaceOrderRequest = {
   qty?: string;
   time_in_force?: TimeInForce;
@@ -189,13 +173,3 @@ export async function cancelOrder(account: Account, id: string): Promise<void> {
     method: 'DELETE',
   });
 }
-
-// --- Transitional type re-exports (deleted in Task B6). Keep consumers compiling. ---
-export type {
-  Position as AlpacaPosition,
-  Order as AlpacaOrder,
-  OrderType,
-  OrderSide,
-  TimeInForce,
-  NewOrderRequest,
-} from './broker';

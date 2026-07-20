@@ -23,12 +23,12 @@ import BackendSettingsScreen from './src/screens/BackendSettingsScreen';
 import AccountsScreen from './src/screens/AccountsScreen';
 import { AccountProvider } from './src/AccountContext';
 import { BackendProvider } from './src/BackendContext';
-import type { AlpacaOrder } from './src/alpaca';
+import type { Order } from './src/broker';
 
 // Consumed by the ChartStack (below) — Chart/OrderEntry/Exit routes.
 export type RootStackParamList = {
   Chart: { ticker: string };
-  OrderEntry: { accountId?: string; symbol?: string; order?: AlpacaOrder };
+  OrderEntry: { accountId?: string; symbol?: string; order?: Order };
   Exit: { symbol: string };
 };
 

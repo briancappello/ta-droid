@@ -21,7 +21,7 @@ import {
   type SubmitResult,
   type SymbolHolding,
 } from '../flatten';
-import type { OrderType } from '../alpaca';
+import type { OrderType } from '../broker';
 
 const TYPES: { label: string; value: OrderType }[] = [
   { label: 'Market', value: 'market' },
