@@ -33,3 +33,14 @@ test('runProvisioning reports bad-passphrase when decrypt throws', async () => {
   });
   expect(res).toEqual({ ok: false, reason: 'bad-passphrase' });
 });
+
+test('runProvisioning returns save-failed when saveCred throws', async () => {
+  let savedFp: string | null = null;
+  const res = await runProvisioning(blob, 'pass', {
+    decrypt: async () => [{ broker: 'alpaca', id: 'PA1', key: 'K', secret: 'S' }],
+    saveCred: async () => { throw new Error('keychain write failed'); },
+    saveFingerprint: async fp => { savedFp = fp; },
+  });
+  expect(res).toEqual({ ok: false, reason: 'save-failed' });
+  expect(savedFp).toBeNull();
+});

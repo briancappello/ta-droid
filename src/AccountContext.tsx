@@ -75,13 +75,17 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       if (!blob) {
         return true;
       }
-      const res = await runProvisioning(blob, passphrase, secretsDeps);
-      if (res.ok) {
-        await reload();
-        setProvStatus('ready');
-        return true;
+      try {
+        const res = await runProvisioning(blob, passphrase, secretsDeps);
+        if (res.ok) {
+          await reload();
+          setProvStatus('ready');
+          return true;
+        }
+      } catch {
+        // ponytail: never reject — gate treats any failure as a re-prompt.
       }
-      return false; // bad passphrase — caller re-prompts
+      return false; // bad passphrase or save failure — caller re-prompts
     },
     [reload],
   );

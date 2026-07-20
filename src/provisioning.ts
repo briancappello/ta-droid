@@ -34,7 +34,7 @@ export async function runProvisioning(
   blob: EncryptedBlob,
   passphrase: string,
   deps: ProvisioningDeps,
-): Promise<{ ok: true } | { ok: false; reason: 'bad-passphrase' }> {
+): Promise<{ ok: true } | { ok: false; reason: 'bad-passphrase' | 'save-failed' }> {
   let creds: ProvisionedCred[];
   try {
     creds = await deps.decrypt(blob, passphrase);
@@ -43,9 +43,15 @@ export async function runProvisioning(
     // ponytail: log nothing — never leak passphrase/creds.
     return { ok: false, reason: 'bad-passphrase' };
   }
-  for (const c of creds) {
-    await deps.saveCred(`${c.broker}:${c.id}`, c.key, c.secret);
+  try {
+    for (const c of creds) {
+      await deps.saveCred(`${c.broker}:${c.id}`, c.key, c.secret);
+    }
+    await deps.saveFingerprint(blob.fingerprint);
+  } catch {
+    // Keystore/Keychain write failed on device.
+    // ponytail: log nothing — same secrets discipline as decrypt.
+    return { ok: false, reason: 'save-failed' };
   }
-  await deps.saveFingerprint(blob.fingerprint);
   return { ok: true };
 }
