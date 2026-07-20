@@ -14,6 +14,7 @@
 
 - **Failsafe first.** All position/order reads and writes go **device → broker (Alpaca) directly** through the driver. They MUST work when the `fa-techan` backend is down. Never gate a broker action on backend availability. `fa-techan` is **read-only enrichment** (health, strategies, watchlists) and is **never in the order/write path**.
 - **Secrets never in plaintext.** Broker key/secret live only in `react-native-keychain` at rest, and (build-time) in a **libsodium-encrypted** blob (ciphertext + salt + nonce) — never in git, never in plaintext in the APK, never in `AsyncStorage`, logs, or metadata. In `catch` blocks log only `e.message` / `AlpacaError.status` — never the `Account`, credentials, request `init`, or headers.
+- **Threat model for the shipped blob.** The encrypted blob (ciphertext + salt + nonce, and its Argon2id params) is embedded as build config (`CREDENTIALS_BLOB_JSON`) and therefore ships inside the APK. Its confidentiality rests **entirely on passphrase entropy**: an attacker with the APK can mount an offline brute-force against the passphrase. Argon2id `MODERATE` limits raise the per-guess cost, but a weak passphrase is the whole attack surface. This is an accepted single-user design (the passphrase is never stored on device — it's entered at provisioning). Choose a high-entropy passphrase; do not treat blob-in-APK as secret-at-rest.
 - **Broker owns paper/live.** `env: 'paper' | 'live'` is removed from the shared model. Paper/live is `account.is_paper` (boolean), consumed inside the driver for host + credential routing. The UI surfaces it as a **"paper" badge when `is_paper === true`; live shows no badge** (unflagged default).
 - **Primary key = broker account id.** `Account.id` is the broker's own account number (Alpaca `account_number`), which is also the fa-techan join key. Join key is `(broker_id, account_id, symbol)`; the tagger keys on `` `${broker}:${account.id}:${symbol}` ``.
 - **SDK is a reference, not a dependency.** Do NOT install `@alpacahq/alpaca-trade-api`. The Alpaca driver is hand-rolled `fetch`; its API contract (endpoints, params, payload shapes) is audited against the SDK's Alpaca models, and it implements standard REST hygiene (redirect-guard, per-request timeout, idempotent-only retry, `clientOrderId` on orders, never replay order POSTs).
@@ -203,7 +204,9 @@ export interface OrderLeg {
 export interface Order extends OrderLeg {
   expires_at: string;
   legs: OrderLeg[] | null;
-  // `order_type` is Alpaca's deprecated alias of `type`; keep for fidelity.
+  // NOTE: an Order carries BOTH `type` (inherited from OrderLeg, typed OrderType)
+  // and `order_type` below — Alpaca's deprecated string alias of the same value.
+  // They coexist for wire fidelity; consumers should read `type`, not `order_type`.
   order_type: string;
 }
 
@@ -393,6 +396,7 @@ git commit -m "feat: reshape Account — broker + is_paper, drop env/AlpacaEnv"
 // __tests__/alpacaDriver.test.ts
 import { alpacaDriver, AlpacaError } from '../src/alpaca';
 import type { Account } from '../src/alpaca';
+import { brokers } from '../src/broker';
 
 const acct: Account = {
   id: 'PA1', name: 'Paper', broker: 'alpaca', is_paper: true, key: 'K', secret: 'S',
@@ -400,6 +404,14 @@ const acct: Account = {
 const live: Account = { ...acct, id: 'A1', name: 'Live', is_paper: false };
 
 afterEach(() => jest.restoreAllMocks());
+
+// Guards the import-side-effect wiring: importing alpaca.ts must replace the
+// A1 placeholder in the registry with the real driver. If module ordering ever
+// regresses, driverFor() would hand back the throwing placeholder — this fails
+// loudly instead.
+test('importing alpaca.ts wires the real driver into the registry', () => {
+  expect(brokers.alpaca.driver).toBe(alpacaDriver);
+});
 
 function mockFetch(status: number, body: unknown) {
   return jest.spyOn(global, 'fetch').mockResolvedValue({
@@ -624,10 +636,16 @@ export const alpacaDriver: BrokerClient = {
 brokers.alpaca.driver = alpacaDriver;
 
 // --- Transitional named exports (deleted in Task B6). Keep consumers compiling. ---
-export const listPositions = alpacaDriver.listPositions;
-export const listOrders = alpacaDriver.listOrders;
-export const createOrder = alpacaDriver.createOrder;
-export const closePosition = alpacaDriver.closePosition;
+// ponytail: wrap (don't detach `alpacaDriver.method`) so these never depend on
+// `this` binding — cheap insurance for a shim that lives across 3 phases.
+export const listPositions = (a: Account): Promise<Position[]> =>
+  alpacaDriver.listPositions(a);
+export const listOrders = (a: Account, f?: OrderFilter): Promise<Order[]> =>
+  alpacaDriver.listOrders(a, f);
+export const createOrder = (a: Account, req: NewOrderRequest): Promise<Order> =>
+  alpacaDriver.createOrder(a, req);
+export const closePosition = (a: Account, symbol: string): Promise<void> =>
+  alpacaDriver.closePosition(a, symbol);
 
 // listOpenOrders shim: old consumers call it with no filter → open orders.
 export function listOpenOrders(account: Account): Promise<Order[]> {
@@ -689,8 +707,10 @@ git commit -m "feat: Alpaca driver with redirect-guard, timeout, clientOrderId; 
 ### Task B1: `flatten.ts` — driver via `driverFor`; remove `finishExit` suppress seam
 
 **Files:**
-- Modify: `src/flatten.ts`
+- Modify: `src/flatten.ts`, `src/screens/ExitScreen.tsx` (call-site only)
 - Test: `__tests__/flatten.test.ts`
+
+> **Why ExitScreen is edited here, not B2:** `finishExit`'s signature changes from 4 args `(legs, symbol, submit, suppress)` to 2 args `(legs, submit)`. `ExitScreen` is the only call site (verified `src/screens/ExitScreen.tsx:92-97`). If B1 changed only `flatten.ts`, the B1 commit would leave `ExitScreen` calling the new 2-arg fn with 4 args — a compile break between B1 and B2, violating the per-task-green rule. So B1 also updates the `onExitAll` call site to the 2-arg form. B2 then only removes the now-dead `postExitSuppress` *import* and the function itself.
 
 **Interfaces:**
 - Consumes (Phase A): `driverFor` (`src/broker`), types `Account`/`Position`/`NewOrderRequest` (now via `broker.ts`).
@@ -718,6 +738,11 @@ git commit -m "feat: Alpaca driver with redirect-guard, timeout, clientOrderId; 
   ```
   (Note: `symbol` param also removed — it was only used to build the suppress payload.)
 - Update the comment above `finishExit` to drop the suppress/Task-19 language: `// Runs the "Exit all": submit the flatten legs and report per-leg + allOk.`
+- **`ExitScreen.tsx` call site (lines 92-97):** collapse the 4-arg call to the 2-arg form so the tree still compiles after this commit:
+  ```ts
+  const { results, allOk } = await finishExit(legs, submitFlatten);
+  ```
+  Leave the `postExitSuppress` import in place for now — B2 removes it together with the function. (`symbol` is still destructured from route params for the header/plan; only its use as a `finishExit` arg goes away.)
 
 - [ ] **Step 1: Update `flatten.test.ts`**
 
@@ -810,7 +835,7 @@ Expected: PASS (4 tests).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/flatten.ts __tests__/flatten.test.ts
+git add src/flatten.ts src/screens/ExitScreen.tsx __tests__/flatten.test.ts
 git commit -m "refactor: flatten via broker driver; drop finishExit suppress seam"
 ```
 
@@ -828,12 +853,8 @@ git commit -m "refactor: flatten via broker driver; drop finishExit suppress sea
 **Changes:**
 - `src/techan.ts`: delete the entire `postExitSuppress` function (the last export).
 - `src/screens/ExitScreen.tsx`:
-  - Delete line 25: `import { postExitSuppress } from '../techan';`
+  - Delete line 25: `import { postExitSuppress } from '../techan';` (the `onExitAll` call site was already collapsed to the 2-arg form in B1; only the now-unused import remains to remove).
   - Update the `../flatten` import to drop nothing else (still uses `finishExit`, `submitFlatten`, `holdingsForSymbol`, `flattenPlan`, `FlattenLeg`).
-  - Replace the `onExitAll` `finishExit(...)` call (lines 92-97) with the 2-arg form:
-    ```ts
-    const { results, allOk } = await finishExit(legs, submitFlatten);
-    ```
 - `__tests__/techan.test.ts`: delete the `postExitSuppress` test block (`test('postExitSuppress true on ok, false on failure, never throws', ...)`) and its import of `postExitSuppress`.
 - `__tests__/exitScreen.test.tsx`: if it mocks `../src/techan` or references `postExitSuppress`, remove that. The Task-19 test `fires best-effort suppress after flatten...` (if present in this file) is deleted. The render smoke test stays; update the `flatten` mock so `finishExit` matches the new 2-arg shape if it's asserted (it's mocked, so arity isn't enforced — just ensure no `postExitSuppress` reference remains).
 
@@ -935,6 +956,9 @@ git commit -m "refactor: screens use broker driver; is_paper badge replaces env 
 - The `Draft` type and add/edit form reference `env`. Since C4 removes the form, the minimal Phase-B fix: replace `env: AlpacaEnv` in `Draft` with `is_paper: boolean`; `EMPTY_DRAFT` `env: 'paper'` → `is_paper: true`; the env toggle UI (lines ~145-156, the `['paper','live'].map`) → a single paper/live toggle on `is_paper` (a two-button toggle: "Paper" sets `is_paper: true`, "Live" sets `false`); `item.env.toUpperCase()` (line ~104) → `item.is_paper ? 'PAPER' : 'LIVE'`; `env: draft.env` in the add/update calls → `is_paper: draft.is_paper`. Since `addAccount`/`updateAccount` in `accounts.ts` still take `env` in Phase B, ALSO update `accounts.ts` to accept `is_paper` — but `accounts.ts` is rewritten in C3. **To avoid churn, do the minimal `accounts.ts` field swap here** (`env: AlpacaEnv` → `is_paper: boolean` in `AccountMeta`, `addAccount` input, and the load/save mapping) so the app compiles; C3 then rewrites the module for build-time config.
 
 **accounts.ts minimal swap (this task):**
+
+> **Known throwaway:** C3 deletes `AccountMeta`/`addAccount`/`updateAccount`/`deleteAccount` outright. This swap only exists to keep Phase B compiling; do the mechanical field rename and nothing more — do NOT polish, re-document, or add tests for code two tasks from deletion.
+
 - `import type { Account, AlpacaEnv }` → `import type { Account }`.
 - `AccountMeta`: `env: AlpacaEnv` → `is_paper: boolean; broker: 'alpaca'`.
 - `loadAccounts`: push `broker: m.broker, is_paper: m.is_paper` instead of `env: m.env`.
@@ -973,6 +997,7 @@ git commit -m "refactor: is_paper replaces env in AccountPicker/AccountsScreen/a
 **Interfaces:**
 - `StrategyPosition` gains `broker_id`: `{ broker_id: string; account_id: string; symbol: string; strategy: string }` (in `techan.ts`).
 - `taggerFromMap` keys on `` `${broker_id}:${account_id}:${symbol}` `` and looks up `` `${account.broker}:${account.id}:${symbol}` ``.
+  - **Separator change:** the current key is `` `${account.id}::${symbol}` `` (double colon). The new key uses **single** colons to match the contract's `` `${broker_id}:${account_id}:${symbol}` `` (contract §4.2 / §6). Do not carry the `::` over.
 
 **Changes:**
 - `src/techan.ts`: `StrategyPosition` type gains `broker_id: string` (first field).
@@ -1028,7 +1053,10 @@ Expected: PASS.
 
 ```bash
 git add src/strategyTagger.ts src/techan.ts __tests__/strategyTagger.test.ts docs/superpowers/contracts/fe-fa-techan-contract.md
-git commit -m "feat: rekey strategy tagger to (broker, account, symbol); finalize contract"
+git commit -m "feat: rekey strategy tagger to (broker, account, symbol); finalize contract
+
+Key separator also changes '::' -> ':' to match the contract's
+\`\${broker_id}:\${account_id}:\${symbol}\` join (contract §4.2)."
 ```
 
 ---
@@ -1662,6 +1690,8 @@ git commit -m "chore: Phase C verification fixes"
 - [ ] **Step 1: Author local creds + encrypt**
 
 Copy `credentials.example.json` → `credentials.local.json`, fill in a real paper account (`id` = the Alpaca `account_number` from `GET /v2/account`, or the paper account number visible in the Alpaca dashboard). Run `npm run encrypt-creds -- <passphrase>`; put `ACCOUNTS_JSON` (non-secret) and `CREDENTIALS_BLOB_JSON` (the blob) into `.env`.
+
+> **Trusted, not verified:** nothing checks that the `id` you author in `ACCOUNTS_JSON` actually matches the account the `key`/`secret` authenticate to. A mismatch does not error — it silently tags every position `Unattributed` (the join key never matches) while orders still route fine. If strategies show all-`Unattributed` on a backend-up run, suspect an `id` ↔ cred mismatch first. (`// ponytail: id/cred correspondence is trusted; add a GET /v2/account id-check only if this bites.`)
 
 - [ ] **Step 2: Build/run on emulator**
 
