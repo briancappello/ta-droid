@@ -4,14 +4,13 @@
 **FE client:** `src/techan.ts`.
 **BE work:** all four routes below must be added to `fa-techan` (`app/api/v1/…`).
 
-> **Pending FE change (broker-first-class effort):** this contract reflects the
-> agreed target. Two changes land with the broker-first-class implementation
-> (`docs/superpowers/specs/2026-07-19-broker-first-class-design.md`), not yet in
-> shipped code: (1) `/strategies/positions` gains `broker_id` and the join key
-> becomes `(broker_id, account_id, symbol)`; (2) the previously-specified
-> `POST /exits` endpoint and its `postExitSuppress` client are **removed** —
-> exits are just Alpaca orders (see §6). Until that effort ships, `src/techan.ts`
-> still contains `postExitSuppress`; treat it as deprecated.
+> **Broker-first-class (shipped):** this contract reflects the shipped state.
+> Two changes landed with the broker-first-class implementation
+> (`docs/superpowers/specs/2026-07-19-broker-first-class-design.md`):
+> (1) `/strategies/positions` gained `broker_id` and the join key is now
+> `(broker_id, account_id, symbol)`; (2) the previously-specified `POST /exits`
+> endpoint and its `postExitSuppress` client were **removed** — exits are just
+> Alpaca orders (see §6).
 
 This document is the single source of truth for the HTTP contract between the
 mobile app (FE, this repo) and the `fa-techan` FastAPI service (BE). The FE
@@ -233,10 +232,10 @@ resource (§7).
 
 1. **`account_id` — RESOLVED.** The join key is `(broker_id, account_id)` where
    `account_id` is the **broker's own account number** (Alpaca `account_number`)
-   — stable, non-secret, and independently known to both sides. This lands with
+   — stable, non-secret, and independently known to both sides. This landed with
    the broker-first-class effort
    (`docs/superpowers/specs/2026-07-19-broker-first-class-design.md`), which
-   makes the broker account number the FE's primary key and rekeys the tagger to
+   makes the broker account number the FE's primary key and rekeyed the tagger to
    `` `${broker_id}:${account_id}:${symbol}` ``.
 
 2. **Auth.** No auth header is sent today. If `fa-techan` needs to authenticate
@@ -272,8 +271,8 @@ the current work:
 
 ## 8. Reference — FE client surface
 
-All in `src/techan.ts`; consumed as noted. (`postExitSuppress` is removed by the
-broker-first-class effort — see the pending-change note at the top.)
+All in `src/techan.ts`; consumed as noted. (`postExitSuppress` was removed by the
+broker-first-class effort — see the note at the top.)
 
 | FE function | Endpoint | Consumer |
 |---|---|---|

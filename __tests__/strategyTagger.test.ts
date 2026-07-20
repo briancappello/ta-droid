@@ -2,14 +2,14 @@
 import { taggerFromMap } from '../src/strategyTagger';
 import type { Account } from '../src/alpaca';
 
-const ira: Account = { id: 'i', name: 'IRA', key: 'K', secret: 'S', env: 'live' };
-const paper: Account = { id: 'p', name: 'Paper', key: 'K', secret: 'S', env: 'paper' };
+const ira: Account = { id: 'i', name: 'IRA', broker: 'alpaca', is_paper: false, key: 'K', secret: 'S' };
+const paper: Account = { id: 'p', name: 'Paper', broker: 'alpaca', is_paper: true, key: 'K', secret: 'S' };
 
-test('tags by (account, symbol), Unattributed otherwise', () => {
+test('tags by (broker, account, symbol), Unattributed otherwise', () => {
   const tag = taggerFromMap([
-    { account_id: 'i', symbol: 'AAPL', strategy: 'Momentum' },
+    { broker_id: 'alpaca', account_id: 'i', symbol: 'AAPL', strategy: 'Momentum' },
   ]);
   expect(tag({ symbol: 'AAPL' }, ira)).toBe('Momentum');
-  expect(tag({ symbol: 'AAPL' }, paper)).toBe('Unattributed');
-  expect(tag({ symbol: 'NVDA' }, ira)).toBe('Unattributed');
+  expect(tag({ symbol: 'AAPL' }, paper)).toBe('Unattributed'); // different account
+  expect(tag({ symbol: 'NVDA' }, ira)).toBe('Unattributed');   // different symbol
 });

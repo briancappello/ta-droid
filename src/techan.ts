@@ -2,6 +2,7 @@
 import { API_BASE } from './api';
 
 export type StrategyPosition = {
+  broker_id: string;
   account_id: string;
   symbol: string;
   strategy: string;

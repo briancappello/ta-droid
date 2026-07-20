@@ -8,10 +8,10 @@ export function taggerFromMap(
 ): StrategyOf<{ symbol: string }> {
   const map = new Map<string, string>();
   for (const r of rows) {
-    map.set(`${r.account_id}::${r.symbol}`, r.strategy);
+    map.set(`${r.broker_id}:${r.account_id}:${r.symbol}`, r.strategy);
   }
   return (item: { symbol: string }, account: Account) =>
-    map.get(`${account.id}::${item.symbol}`) ?? 'Unattributed';
+    map.get(`${account.broker}:${account.id}:${item.symbol}`) ?? 'Unattributed';
 }
 
 export async function loadTagger(): Promise<StrategyOf<{ symbol: string }>> {
