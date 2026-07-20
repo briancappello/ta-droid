@@ -1,4 +1,5 @@
 // __tests__/encryptCredentials.test.mjs
+import { createHash } from 'node:crypto';
 import sodium from 'libsodium-wrappers-sumo';
 import { encryptCredentials } from '../scripts/encrypt-credentials.mjs';
 
@@ -7,6 +8,7 @@ test('encryptCredentials round-trips with the same primitives', async () => {
   const creds = [{ broker: 'alpaca', id: 'PA1', key: 'K', secret: 'S' }];
   const blob = await encryptCredentials('correct horse battery staple', creds);
   expect(blob.salt && blob.nonce && blob.ciphertext && blob.fingerprint).toBeTruthy();
+  expect(blob.fingerprint).toBe(createHash('sha256').update(blob.ciphertext).digest('hex'));
 
   // decrypt with the same primitives (simulating the RN side)
   const V = sodium.base64_variants.ORIGINAL;
