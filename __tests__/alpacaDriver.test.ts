@@ -80,3 +80,13 @@ test('non-ok response throws AlpacaError with status', async () => {
   mockFetch(422, { message: 'bad' });
   await expect(alpacaDriver.listPositions(acct)).rejects.toBeInstanceOf(AlpacaError);
 });
+
+test('request timeout throws AlpacaError with status 0', async () => {
+  jest
+    .spyOn(global, 'fetch')
+    .mockRejectedValue(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+  await expect(alpacaDriver.listPositions(acct)).rejects.toMatchObject({
+    status: 0,
+    message: 'Alpaca request timed out.',
+  });
+});
