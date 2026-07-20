@@ -1,81 +1,47 @@
 // __tests__/accounts.test.ts
-import {
-  loadAccounts,
-  addAccount,
-  updateAccount,
-  deleteAccount,
-} from '../src/accounts';
-import * as Keychain from 'react-native-keychain';
+import Config from 'react-native-config';
+import { loadAccounts } from '../src/accounts';
+import { readCred } from '../src/secretsBackend';
 
-jest.mock('react-native-keychain');
+jest.mock('../src/secretsBackend');
 
-// In-memory fake keychain keyed by service.
-let store: Record<string, { username: string; password: string }>;
+const creds: Record<string, { key: string; secret: string }> = {
+  'alpaca:PA1': { key: 'PKEY', secret: 'PSECRET' },
+};
 
 beforeEach(() => {
-  store = {};
-  (Keychain.setGenericPassword as jest.Mock).mockImplementation(
-    async (username: string, password: string, opts: { service: string }) => {
-      store[opts.service] = { username, password };
-      return true;
-    },
+  (readCred as jest.Mock).mockImplementation(
+    async (serviceKey: string) => creds[serviceKey] ?? null,
   );
-  (Keychain.getGenericPassword as jest.Mock).mockImplementation(
-    async (opts: { service: string }) => store[opts.service] ?? false,
-  );
-  (Keychain.resetGenericPassword as jest.Mock).mockImplementation(
-    async (opts: { service: string }) => {
-      delete store[opts.service];
-      return true;
-    },
-  );
+  (Config as { ACCOUNTS_JSON?: string }).ACCOUNTS_JSON = JSON.stringify([
+    { broker: 'alpaca', id: 'PA1', name: 'Paper', is_paper: true },
+  ]);
 });
 
-test('addAccount persists and loadAccounts returns it with secrets', async () => {
-  const created = await addAccount({
-    name: 'Paper',
-    key: 'PKEY',
-    secret: 'PSECRET',
-    is_paper: true,
-  });
-  expect(created.id).toBeTruthy();
+test('loadAccounts joins build config with provisioned creds', async () => {
   const loaded = await loadAccounts();
   expect(loaded).toHaveLength(1);
   expect(loaded[0]).toMatchObject({
+    id: 'PA1',
     name: 'Paper',
+    broker: 'alpaca',
+    is_paper: true,
     key: 'PKEY',
     secret: 'PSECRET',
-    is_paper: true,
   });
 });
 
-test('the metadata blob never contains secrets', async () => {
-  await addAccount({ name: 'IRA', key: 'LKEY', secret: 'LSECRET', is_paper: false });
-  const metaBlob = store['alpaca.accounts.meta'].password;
-  expect(metaBlob).not.toContain('LKEY');
-  expect(metaBlob).not.toContain('LSECRET');
-});
-
-test('updateAccount changes name/is_paper and secrets', async () => {
-  const a = await addAccount({
-    name: 'Old',
-    key: 'K',
-    secret: 'S',
-    is_paper: true,
-  });
-  await updateAccount({ ...a, name: 'New', is_paper: false, secret: 'S2' });
+test('accounts with no provisioned cred are skipped', async () => {
+  (Config as { ACCOUNTS_JSON?: string }).ACCOUNTS_JSON = JSON.stringify([
+    { broker: 'alpaca', id: 'PA1', name: 'Paper', is_paper: true },
+    { broker: 'alpaca', id: 'NOPE', name: 'Unprovisioned', is_paper: false },
+  ]);
   const loaded = await loadAccounts();
-  expect(loaded[0]).toMatchObject({ name: 'New', is_paper: false, secret: 'S2' });
+  expect(loaded).toHaveLength(1);
+  expect(loaded[0].id).toBe('PA1');
 });
 
-test('deleteAccount removes meta and secret entry', async () => {
-  const a = await addAccount({
-    name: 'Temp',
-    key: 'K',
-    secret: 'S',
-    is_paper: true,
-  });
-  await deleteAccount(a.id);
+test('malformed ACCOUNTS_JSON yields no accounts', async () => {
+  (Config as { ACCOUNTS_JSON?: string }).ACCOUNTS_JSON = 'not json';
   expect(await loadAccounts()).toHaveLength(0);
-  expect(store[`alpaca.account.${a.id}`]).toBeUndefined();
 });

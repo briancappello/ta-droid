@@ -12,6 +12,6 @@ module.exports = {
     '^.+\\.(js|jsx|ts|tsx|mjs)$': 'babel-jest',
   },
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|@react-navigation|react-native-gesture-handler|react-native-reanimated|react-native-drawer-layout|react-native-worklets|react-native-config|react-native-webview)/)',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|@react-navigation|react-native-gesture-handler|react-native-reanimated|react-native-drawer-layout|react-native-worklets|react-native-config|react-native-webview|react-native-libsodium)/)',
   ],
 };

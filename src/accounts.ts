@@ -1,89 +1,30 @@
 // src/accounts.ts
-import * as Keychain from 'react-native-keychain';
+import Config from 'react-native-config';
 import type { Account } from './alpaca';
+import type { BrokerId } from './broker';
+import { readCred } from './secretsBackend';
 
-export type AccountMeta = { id: string; name: string; is_paper: boolean; broker: 'alpaca' };
+type AccountConfig = { broker: BrokerId; id: string; name: string; is_paper: boolean };
 
-const META_SERVICE = 'alpaca.accounts.meta';
-const secretService = (id: string) => `alpaca.account.${id}`;
-
-function newId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
-
-async function loadMeta(): Promise<AccountMeta[]> {
-  const entry = await Keychain.getGenericPassword({ service: META_SERVICE });
-  if (!entry) {
-    return [];
-  }
+function parseAccountsConfig(): AccountConfig[] {
   try {
-    return JSON.parse(entry.password) as AccountMeta[];
+    return JSON.parse(Config.ACCOUNTS_JSON ?? '[]') as AccountConfig[];
   } catch {
     return [];
   }
 }
 
-async function saveMeta(meta: AccountMeta[]): Promise<void> {
-  await Keychain.setGenericPassword('meta', JSON.stringify(meta), {
-    service: META_SERVICE,
-  });
-}
-
+// Accounts = non-secret build config joined with Keystore-provisioned creds.
+// An account with no provisioned cred is skipped (provisioning not yet run).
 export async function loadAccounts(): Promise<Account[]> {
-  const meta = await loadMeta();
-  const accounts: Account[] = [];
-  for (const m of meta) {
-    const secret = await Keychain.getGenericPassword({
-      service: secretService(m.id),
-    });
-    if (!secret) {
+  const cfgs = parseAccountsConfig();
+  const out: Account[] = [];
+  for (const c of cfgs) {
+    const cred = await readCred(`${c.broker}:${c.id}`);
+    if (!cred) {
       continue;
     }
-    accounts.push({
-      id: m.id,
-      name: m.name,
-      broker: m.broker,
-      is_paper: m.is_paper,
-      key: secret.username,
-      secret: secret.password,
-    });
+    out.push({ id: c.id, name: c.name, broker: c.broker, is_paper: c.is_paper, key: cred.key, secret: cred.secret });
   }
-  return accounts;
-}
-
-export async function addAccount(input: {
-  name: string;
-  key: string;
-  secret: string;
-  is_paper: boolean;
-}): Promise<Account> {
-  const id = newId();
-  await Keychain.setGenericPassword(input.key, input.secret, {
-    service: secretService(id),
-  });
-  const meta = await loadMeta();
-  meta.push({ id, name: input.name, broker: 'alpaca', is_paper: input.is_paper });
-  await saveMeta(meta);
-  return { id, name: input.name, broker: 'alpaca', is_paper: input.is_paper, key: input.key, secret: input.secret };
-}
-
-export async function updateAccount(account: Account): Promise<void> {
-  await Keychain.setGenericPassword(account.key, account.secret, {
-    service: secretService(account.id),
-  });
-  const meta = await loadMeta();
-  const idx = meta.findIndex(m => m.id === account.id);
-  const next: AccountMeta = { id: account.id, name: account.name, broker: 'alpaca', is_paper: account.is_paper };
-  if (idx >= 0) {
-    meta[idx] = next;
-  } else {
-    meta.push(next);
-  }
-  await saveMeta(meta);
-}
-
-export async function deleteAccount(id: string): Promise<void> {
-  await Keychain.resetGenericPassword({ service: secretService(id) });
-  const meta = (await loadMeta()).filter(m => m.id !== id);
-  await saveMeta(meta);
+  return out;
 }
