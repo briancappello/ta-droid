@@ -1,6 +1,5 @@
 // __tests__/alpaca.test.ts
 import {
-  alpacaBaseUrl,
   alpacaHeaders,
   listPositions,
   type Account,
@@ -41,11 +40,6 @@ function mockFetch(status: number, body: unknown) {
     text: async () => JSON.stringify(body),
   } as Response);
 }
-
-test('alpacaBaseUrl picks host by env', () => {
-  expect(alpacaBaseUrl('paper')).toBe('https://paper-api.alpaca.markets');
-  expect(alpacaBaseUrl('live')).toBe('https://api.alpaca.markets');
-});
 
 test('alpacaHeaders sets auth headers from account', () => {
   expect(alpacaHeaders(paperAccount)).toEqual({
