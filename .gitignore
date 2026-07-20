@@ -22,6 +22,10 @@ local.properties
 .env
 .env.local
 
+# Broker credentials (build-time encrypt; never commit either)
+credentials.local.json
+credentials.enc.json
+
 # node.js
 #
 node_modules/
