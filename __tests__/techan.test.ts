@@ -3,7 +3,6 @@ import {
   pingHealth,
   fetchStrategyPositions,
   fetchWatchlists,
-  postExitSuppress,
 } from '../src/techan';
 
 afterEach(() => jest.restoreAllMocks());
@@ -38,12 +37,4 @@ test('fetchStrategyPositions returns rows, [] on failure', async () => {
 test('fetchWatchlists [] on non-ok', async () => {
   mockFetch(500, {});
   expect(await fetchWatchlists()).toEqual([]);
-});
-
-test('postExitSuppress true on ok, false on failure, never throws', async () => {
-  mockFetch(200, {});
-  expect(await postExitSuppress('AAPL', ['a'])).toBe(true);
-  jest.restoreAllMocks();
-  jest.spyOn(global, 'fetch').mockRejectedValue(new Error('down'));
-  expect(await postExitSuppress('AAPL', ['a'])).toBe(false);
 });

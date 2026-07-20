@@ -44,19 +44,3 @@ export async function fetchWatchlistSymbols(id: string): Promise<string[]> {
   );
   return rows.map(r => r.symbol);
 }
-
-export async function postExitSuppress(
-  symbol: string,
-  accountIds: string[],
-): Promise<boolean> {
-  try {
-    const res = await fetch(`${API_BASE}/exits`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ symbol, account_ids: accountIds }),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}

@@ -22,7 +22,6 @@ import {
   type SymbolHolding,
 } from '../flatten';
 import type { OrderType } from '../alpaca';
-import { postExitSuppress } from '../techan';
 
 const TYPES: { label: string; value: OrderType }[] = [
   { label: 'Market', value: 'market' },
