@@ -18,9 +18,16 @@ const paperAccount: Account = {
   name: 'Paper',
   key: 'PKEY',
   secret: 'PSECRET',
-  env: 'paper',
+  is_paper: true,
+  broker: 'alpaca',
 };
-const liveAccount: Account = { ...paperAccount, id: '2', name: 'IRA', env: 'live' };
+const liveAccount: Account = {
+  ...paperAccount,
+  id: '2',
+  name: 'IRA',
+  is_paper: false,
+  broker: 'alpaca',
+};
 
 afterEach(() => {
   jest.restoreAllMocks();

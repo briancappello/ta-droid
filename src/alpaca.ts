@@ -1,12 +1,13 @@
 // src/alpaca.ts
-export type AlpacaEnv = 'paper' | 'live';
+import type { BrokerId } from './broker';
 
 export type Account = {
-  id: string;
+  id: string; // the broker's account number (Alpaca account_number); primary key + fa-techan join key
   name: string;
+  broker: BrokerId;
+  is_paper: boolean;
   key: string;
   secret: string;
-  env: AlpacaEnv;
 };
 
 export type AlpacaPosition = {
