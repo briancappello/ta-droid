@@ -89,12 +89,7 @@ export default function ExitScreen({
 
   const onExitAll = async () => {
     setPending(true);
-    const { results, allOk } = await finishExit(
-      legs,
-      symbol,
-      submitFlatten,
-      postExitSuppress,
-    );
+    const { results, allOk } = await finishExit(legs, submitFlatten);
     setPending(false);
     if (allOk) {
       Alert.alert('Flat', `Exited ${legs.length} account(s).`);

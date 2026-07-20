@@ -1,14 +1,8 @@
 // src/flatten.ts
-import {
-  AlpacaError,
-  createOrder,
-  listPositions,
-  type Account,
-  type AlpacaPosition,
-  type NewOrderRequest,
-} from './alpaca';
+import { AlpacaError, type Account } from './alpaca';
+import { driverFor, type Position, type NewOrderRequest } from './broker';
 
-export type SymbolHolding = { account: Account; position: AlpacaPosition };
+export type SymbolHolding = { account: Account; position: Position };
 export type FlattenLeg = { account: Account; req: NewOrderRequest };
 export type SubmitResult = { leg: FlattenLeg; ok: boolean; error?: string };
 
@@ -17,7 +11,7 @@ export async function holdingsForSymbol(
   symbol: string,
 ): Promise<SymbolHolding[]> {
   const settled = await Promise.allSettled(
-    accounts.map(a => listPositions(a)),
+    accounts.map(a => driverFor(a).listPositions(a)),
   );
   const out: SymbolHolding[] = [];
   settled.forEach((r, i) => {
@@ -48,7 +42,7 @@ export async function submitFlatten(
   legs: FlattenLeg[],
 ): Promise<SubmitResult[]> {
   const settled = await Promise.allSettled(
-    legs.map(l => createOrder(l.account, l.req)),
+    legs.map(l => driverFor(l.account).createOrder(l.account, l.req)),
   );
   return settled.map((r, i) => {
     if (r.status === 'fulfilled') {
@@ -60,24 +54,12 @@ export async function submitFlatten(
   });
 }
 
-// Orchestrates the "Exit all" outcome: flatten is authoritative, the
-// suppress is best-effort. A throwing/failing suppress must never change the
-// flatten result — this is the single seam ExitScreen calls and Task 19 wires
-// the real postExitSuppress into.
+// Runs the "Exit all": submit the flatten legs and report per-leg + allOk.
 export async function finishExit(
   legs: FlattenLeg[],
-  symbol: string,
   submit: (l: FlattenLeg[]) => Promise<SubmitResult[]>,
-  suppress: (s: string, ids: string[]) => Promise<boolean>,
-): Promise<{ results: SubmitResult[]; allOk: boolean; suppressed: boolean }> {
+): Promise<{ results: SubmitResult[]; allOk: boolean }> {
   const results = await submit(legs);
   const allOk = results.every(r => r.ok);
-  const ids = legs.map(l => l.account.id);
-  let suppressed = false;
-  try {
-    suppressed = await suppress(symbol, ids);
-  } catch {
-    suppressed = false; // best-effort: swallow, flatten stands
-  }
-  return { results, allOk, suppressed };
+  return { results, allOk };
 }
