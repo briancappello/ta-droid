@@ -1,97 +1,174 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# FinCharts
 
-# Getting Started
+React Native Android application bootstrapped with [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Quickrun
 
-## Step 1: Start Metro
+Assumes the environment below is already set up (JDK 21, Node 22, Android SDK, env vars, emulator/device).
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
-
-To start the Metro dev server, run the following command from the root of your React Native project:
+### Hot-reload dev mode
 
 ```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
+pnpm install                    # 1. deps (skip if unchanged)
+pnpm start                      # 2. build + launch on emulator/device (auto-boots an emulator and its own Metro)
 ```
 
-## Step 2: Build and run your app
+`pnpm start` runs `react-native run-android`: it builds, installs, and starts
+Metro itself, auto-booting an emulator if no device is connected. For a
+dedicated Metro-only packager terminal, use `pnpm metro`.
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+### Sideload onto a physical phone
 
-### Android
+Enable USB debugging on the phone and plug it in.
 
 ```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+adb devices                                              # 1. confirm phone is listed
+cd android && ./gradlew assembleRelease && cd ..         # 2. build release APK
+adb install -r android/app/build/outputs/apk/release/app-release.apk   # 3. install
 ```
 
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+Or, for a debug build straight to the connected phone:
 
 ```sh
-bundle install
+pnpm start            # (or pnpm android) installs debug build to whichever device adb lists
 ```
 
-Then, and every time you update your native dependencies, run:
+## Prerequisites
+
+- Arch Linux
+- Android Studio (for SDK management)
+- pnpm
+
+## Development Environment Setup
+
+### 1. Install JDK 21
 
 ```sh
-bundle exec pod install
+sudo pacman -S jdk21-openjdk
+sudo archlinux-java set java-21-openjdk
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+Verify:
 
 ```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+java -version
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+### 2. Install Node.js 22 + pnpm via mise
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+The toolchain is pinned in `.mise.toml` (Node 22, pnpm latest, JDK 21). Node 22
+LTS is required — Node 25+ is not compatible with Metro's worker resolution.
 
-## Step 3: Modify your app
+Install [mise](https://mise.jdx.dev), then from the repo root:
 
-Now that you have successfully run the app, let's make changes!
+```sh
+mise install       # installs Node 22 + pnpm per .mise.toml
+```
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+Verify (from the repo root, so mise activates the pinned versions):
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+```sh
+node -v   # should show v22.x.x
+pnpm -v   # should show the pinned pnpm
+```
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+> Do not use fnm or corepack for this repo — they ship a different pnpm that
+> shadows mise's and ignores the native-build approval (`allowBuilds`) in
+> `pnpm-workspace.yaml`, breaking `react-native-libsodium`. Let mise be the
+> single source of Node and pnpm.
 
-## Congratulations! :tada:
+### 3. Android SDK
 
-You've successfully run and modified your React Native App. :partying_face:
+Open Android Studio and install the following via **Settings > Languages & Frameworks > Android SDK**:
 
-### Now what?
+**SDK Platforms tab:**
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+- Android API 36
 
-# Troubleshooting
+**SDK Tools tab:**
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+- Android SDK Build-Tools 36
+- Android SDK Command-line Tools (latest)
+- Android SDK Platform-Tools
+- NDK (Side by side) 27.1.12297006
 
-# Learn More
+### 4. Android Emulator
 
-To learn more about React Native, take a look at the following resources:
+Install a system image and create an AVD:
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+```sh
+sdkmanager "system-images;android-36;google_apis;x86_64"
+sdkmanager --licenses
+avdmanager create avd \
+  -n Pixel_8 \
+  -k "system-images;android-36;google_apis;x86_64" \
+  -d "pixel_8"
+```
+
+Verify KVM acceleration is available (required for x86_64 emulator performance):
+
+```sh
+lsmod | grep kvm
+```
+
+You should see `kvm_intel` or `kvm_amd` loaded. If not:
+
+```sh
+sudo modprobe kvm_intel  # or kvm_amd for AMD CPUs
+```
+
+### 5. Shell Environment
+
+Add the following to `~/.zshrc` (or `~/.bashrc`):
+
+```sh
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+export ANDROID_HOME=$HOME/Android/Sdk
+export PATH="$JAVA_HOME/bin:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+```
+
+Source the file or open a new terminal:
+
+```sh
+source ~/.zshrc
+```
+
+### 6. Install Dependencies
+
+```sh
+pnpm install
+```
+
+### 7. Environment Variables
+
+Copy the example env file:
+
+```sh
+cp .env.example .env
+```
+
+## Running the App
+
+Build, install, and launch on an emulator/device (starts Metro itself):
+
+```sh
+pnpm start
+```
+
+## Useful Commands
+
+| Command            | Description                                                       |
+| ------------------ | ---------------------------------------------------------------- |
+| `pnpm start`       | Build + run on Android emulator/device (auto-boots Metro)        |
+| `pnpm android`     | Same as `pnpm start` (`react-native run-android`)                |
+| `pnpm metro`       | Start the Metro dev server only (dedicated packager terminal)    |
+| `pnpm test`        | Run tests                                                        |
+| `pnpm run lint`    | Run ESLint                                                       |
+
+## Troubleshooting
+
+- **`JAVA_HOME` not set**: Ensure JDK 21 is installed and `JAVA_HOME` is exported in your shell config.
+- **No emulators found**: Create an AVD using `avdmanager` (see step 4 above).
+- **Metro worker crashes** (`Jest worker encountered child process exceptions`): You are likely running Node 25+. Run from the repo root so mise pins Node 22 LTS (`mise install`).
+- **Wrong pnpm / `ERR_PNPM_IGNORED_BUILDS`**: a stray pnpm from fnm/corepack is shadowing mise's. Run `which pnpm` — it should resolve to mise's, not a `fnm_multishells/.../corepack` path. Disable corepack (`corepack disable`) and remove fnm if present.
+- **Gradle `Cannot find module @react-native/codegen/...` or missing `@react-native/gradle-plugin`**: dependencies were installed isolated instead of hoisted. React Native's Gradle build needs a flat `node_modules`. This repo sets `nodeLinker: hoisted` in `pnpm-workspace.yaml` (pnpm 11 no longer reads `node-linker` from `.npmrc`). Fix with a clean reinstall: `rm -rf node_modules && pnpm install`, then confirm `ls node_modules/@react-native/codegen` resolves at the top level.
