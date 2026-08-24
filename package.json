@@ -6,7 +6,7 @@
     "android": "react-native run-android",
     "encrypt-creds": "node scripts/encrypt-credentials.mjs",
     "lint": "eslint .",
-    "start": "react-native run-android",
+    "start": "bash scripts/dev.sh",
     "metro": "react-native start",
     "test": "jest"
   },

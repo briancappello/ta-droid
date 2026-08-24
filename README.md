@@ -10,12 +10,22 @@ Assumes the environment below is already set up (JDK 21, Node 22, Android SDK, e
 
 ```sh
 pnpm install                    # 1. deps (skip if unchanged)
-pnpm start                      # 2. build + launch on emulator/device (auto-boots an emulator and its own Metro)
+pnpm start                      # 2. boot emulator (if needed) + build + install + Metro
 ```
 
-`pnpm start` runs `react-native run-android`: it builds, installs, and starts
-Metro itself, auto-booting an emulator if no device is connected. For a
-dedicated Metro-only packager terminal, use `pnpm metro`.
+`pnpm start` runs `scripts/dev.sh`, which owns the emulator and Metro as child
+processes:
+
+- Boots the emulator (cold boot, `-no-snapshot-load`) if no device is connected;
+  reuses an already-connected device otherwise.
+- Builds, installs, and launches the app, then runs Metro (single owner, via
+  `run-android --no-packager`).
+- **Ctrl+C once** = graceful shutdown (`SIGTERM` Metro + `adb emu kill`).
+  **Ctrl+C twice** = force kill both. It only stops the emulator if it booted
+  one; a pre-connected device is left running.
+
+Override the AVD with `AVD=MyAvd pnpm start`. For a dedicated Metro-only
+packager terminal, use `pnpm metro`.
 
 ### Sideload onto a physical phone
 
@@ -159,8 +169,8 @@ pnpm start
 
 | Command            | Description                                                       |
 | ------------------ | ---------------------------------------------------------------- |
-| `pnpm start`       | Build + run on Android emulator/device (auto-boots Metro)        |
-| `pnpm android`     | Same as `pnpm start` (`react-native run-android`)                |
+| `pnpm start`       | Boot emulator (if needed) + build + install + Metro; Ctrl+C tears both down (twice = force) |
+| `pnpm android`     | Raw `react-native run-android` (no wrapper, no signal handling)  |
 | `pnpm metro`       | Start the Metro dev server only (dedicated packager terminal)    |
 | `pnpm test`        | Run tests                                                        |
 | `pnpm run lint`    | Run ESLint                                                       |
