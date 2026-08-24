@@ -6,7 +6,8 @@
     "android": "react-native run-android",
     "encrypt-creds": "node scripts/encrypt-credentials.mjs",
     "lint": "eslint .",
-    "start": "react-native start",
+    "start": "react-native run-android",
+    "metro": "react-native start",
     "test": "jest"
   },
   "dependencies": {

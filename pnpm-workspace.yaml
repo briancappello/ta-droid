@@ -1,0 +1,3 @@
+nodeLinker: hoisted
+allowBuilds:
+  react-native-libsodium: true
