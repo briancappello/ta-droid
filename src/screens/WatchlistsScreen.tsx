@@ -15,6 +15,7 @@ import {
   type Watchlist,
 } from '../watchlists';
 import { apiQuoteToStockQuote, fetchQuotes, type StockQuote } from '../api';
+import { formatMoney, formatPercent } from '../format';
 
 export default function WatchlistsScreen({ navigation }: { navigation: any }) {
   const [lists, setLists] = useState<Watchlist[]>([]);
@@ -108,8 +109,8 @@ export default function WatchlistsScreen({ navigation }: { navigation: any }) {
               <Text style={styles.symbol}>{row.ticker}</Text>
               <Text style={[styles.change, { color }]}>
                 {sign}
-                {row.change} ({sign}
-                {row.changePercent}%)
+                {formatMoney(row.change, row.lastPrice)} ({sign}
+                {formatPercent(row.changePercent)}%)
               </Text>
             </TouchableOpacity>
           );
