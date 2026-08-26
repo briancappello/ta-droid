@@ -1,3 +1,9 @@
+// ponytail: calibrated vs fa-techan/TA-Lib on AAPL 400d (last-100 tail) —
+// maxRel ~0 for every column (sma/bbands/rsi/macd all < 1e-5, floating-point
+// noise). trading-signals uses population sigma (matches TA-Lib BBands) and the
+// MACD EMA first-value seeding transient fully decays past warmup. See
+// __tests__/indicatorCalibration.test.ts. Upgrade path: hand-roll an indicator
+// with TA-Lib seeding only if a future tighter match is ever required.
 import { SMA, EMA, MACD, RSI, BollingerBands } from 'trading-signals';
 
 export const INDICATOR_COLUMNS = [
