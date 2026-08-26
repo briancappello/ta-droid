@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAccounts } from '../AccountContext';
 import { AccountPicker } from '../components/AccountPicker';
 import {
@@ -89,6 +90,7 @@ const needsStop = (t: OrderType) => t === 'stop' || t === 'stop_limit';
 const needsTrail = (t: OrderType) => t === 'trailing_stop';
 
 export default function OrderEntryScreen({ route, navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const { accounts, activeId } = useAccounts();
   const params = route.params;
   const modifyMode = Boolean(params?.order);
@@ -169,7 +171,7 @@ export default function OrderEntryScreen({ route, navigation }: Props) {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}
     >
       <Text style={styles.title}>{modifyMode ? 'Modify Order' : 'New Order'}</Text>
 

@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { fetchHistory, type HistoryResponse } from '../api';
@@ -587,6 +588,7 @@ function FreqDropdown({
 
 export default function ChartScreen({ route, navigation }: Props) {
   const { ticker } = route.params;
+  const insets = useSafeAreaInsets();
   const { accounts, activeId } = useAccounts();
   const [rangeIndex, setRangeIndex] = useState(4); // default 1Y
   const [freq, setFreq] = useState('D');
@@ -644,7 +646,7 @@ export default function ChartScreen({ route, navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.toolbar}>
+      <View style={[styles.toolbar, { paddingTop: insets.top + 6 }]}>
         <RangePills
           ranges={RANGES}
           activeIndex={rangeIndex}

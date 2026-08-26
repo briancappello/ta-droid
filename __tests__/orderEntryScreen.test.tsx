@@ -9,6 +9,9 @@ jest.mock('../src/alpaca');
 // AccountPicker still reads the removed `env` field; B4 repoints it to is_paper.
 // ponytail: stub it here so this screen's test doesn't depend on B4 landing first.
 jest.mock('../src/components/AccountPicker', () => ({ AccountPicker: () => null }));
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
 
 const account = { id: 'a', name: 'Paper', broker: 'alpaca' as const, is_paper: true, key: 'K', secret: 'S' };
 

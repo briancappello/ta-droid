@@ -10,6 +10,9 @@ jest.mock('../src/AccountContext');
 jest.mock('../src/flatten');
 jest.mock('../src/api');
 jest.mock('react-native-webview', () => ({ WebView: () => null }));
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
 
 const account = { id: 'a', name: 'IRA', broker: 'alpaca' as const, is_paper: false, key: 'K', secret: 'S' };
 
