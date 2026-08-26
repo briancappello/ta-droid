@@ -60,7 +60,17 @@ export function createStreamClient(
     if (ws || counts.size === 0) {
       return;
     }
-    ws = factory(url, ['json']);
+    let socket: WebSocketLike;
+    try {
+      socket = factory(url, ['json']);
+    } catch {
+      // Socket creation failed synchronously (e.g. WebSocket ctor threw).
+      // Never let it propagate into React — treat it as a dropped connection
+      // and reschedule via the existing backoff path. ws stays null.
+      onDrop();
+      return;
+    }
+    ws = socket;
     ws.onopen = () => {
       open = true;
       attempt = 0;
@@ -107,7 +117,12 @@ export function createStreamClient(
     connect();
     sendSubscribe();
 
+    let done = false;
     return () => {
+      if (done) {
+        return; // idempotent: a second off() must not touch the shared refcount
+      }
+      done = true;
       for (const tbk of tbks) {
         const n = (counts.get(tbk) ?? 1) - 1;
         if (n <= 0) {

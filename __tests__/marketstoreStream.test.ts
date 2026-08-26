@@ -80,6 +80,44 @@ test('unsubscribe removes the tbk from the union', () => {
   expect(last.tbks).toEqual([]);
 });
 
+test('a throwing factory does not throw out of subscribe and retries via backoff', () => {
+  jest.useFakeTimers();
+  let calls = 0;
+  const sockets: MockSocket[] = [];
+  const factory = () => {
+    calls++;
+    if (calls === 1) {
+      throw new Error('WebSocket constructor blew up');
+    }
+    const s = makeMockSocket();
+    sockets.push(s);
+    return s;
+  };
+  const client = createStreamClient({ url: 'ws://x/ws', factory, backoff: () => 10 });
+  expect(() => client.subscribe(['A/1Min/OHLCV'], () => {})).not.toThrow();
+  expect(calls).toBe(1); // first attempt threw
+  expect(sockets).toHaveLength(0); // no socket yet
+  jest.advanceTimersByTime(10); // backoff fires -> retry
+  expect(calls).toBe(2); // factory called again
+  expect(sockets).toHaveLength(1); // socket created on retry
+  jest.useRealTimers();
+});
+
+test('calling one subscriber off() twice does not kill the other subscriber', () => {
+  const sock = makeMockSocket();
+  const client = createStreamClient({ url: 'ws://x/ws', factory: () => sock });
+  const off1 = client.subscribe(['A/1Min/OHLCV'], () => {});
+  const off2 = client.subscribe(['A/1Min/OHLCV'], () => {});
+  sock.openIt();
+  off1();
+  off1(); // idempotent: must not decrement the shared refcount again
+  let last = JSON.parse(sock.sent[sock.sent.length - 1]);
+  expect(last.tbks).toEqual(['A/1Min/OHLCV']); // second subscriber still alive
+  off2(); // the surviving subscriber leaves -> union empties
+  last = JSON.parse(sock.sent[sock.sent.length - 1]);
+  expect(last.tbks).toEqual([]);
+});
+
 test('reconnects with backoff and resubscribes on reopen', () => {
   jest.useFakeTimers();
   const sockets: MockSocket[] = [];
