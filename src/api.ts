@@ -1,6 +1,16 @@
 import Config from 'react-native-config';
 
+import { getBars, getQuotes, freqToTimeframe } from './marketstore';
+import { computeIndicators, INDICATOR_COLUMNS } from './indicators';
+
 export const API_BASE = Config.API_BASE_URL!;
+
+const OHLCV_COLUMNS = ['open', 'high', 'low', 'close', 'volume'] as const;
+const HISTORY_COLUMNS = [...OHLCV_COLUMNS, ...INDICATOR_COLUMNS];
+// Longest indicator period (sma200); over-fetch this many extra bars so
+// indicators are warm across the returned window, matching fa-techan which
+// computes TA on the full series before slicing.
+const HISTORY_WARMUP = 200;
 
 // --- Types ---
 
@@ -27,7 +37,7 @@ export type ApiQuote = {
 export type HistoryResponse = {
   columns: string[];
   index: number[];
-  data: number[][];
+  data: (number | null)[][];
 };
 
 // --- API ---
@@ -49,22 +59,41 @@ export async function fetchHistory(
   frequency?: string,
   limit?: number,
 ): Promise<HistoryResponse> {
-  const params = new URLSearchParams();
-  if (frequency) {
-    params.set('frequency', frequency);
+  const timeframe = freqToTimeframe(frequency ?? 'D');
+  const want = limit ?? 1500;
+  const { bars } = await getBars(symbol, timeframe, want + HISTORY_WARMUP);
+  if (bars.length === 0) {
+    return { columns: [], index: [], data: [] };
   }
-  if (limit != null) {
-    params.set('limit', String(limit));
+
+  const indicators = computeIndicators(bars.map(b => b.close));
+  const startIdx = Math.max(0, bars.length - want);
+
+  const index: number[] = [];
+  const data: (number | null)[][] = [];
+  for (let i = startIdx; i < bars.length; i++) {
+    const b = bars[i];
+    const ind = indicators[i];
+    index.push(Date.parse(b.time));
+    data.push([
+      b.open,
+      b.high,
+      b.low,
+      b.close,
+      b.volume,
+      ind.sma20,
+      ind.sma100,
+      ind.sma200,
+      ind.bbands_upper,
+      ind.bbands_lower,
+      ind.macd,
+      ind.macd_signal,
+      ind.macd_difference,
+      ind.rsi,
+    ]);
   }
-  const qs = params.toString();
-  const url = `${API_BASE}/finance/history/${encodeURIComponent(symbol)}${
-    qs ? '?' + qs : ''
-  }`;
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
-  }
-  return response.json();
+
+  return { columns: HISTORY_COLUMNS, index, data };
 }
 
 export function apiQuoteToStockQuote(q: ApiQuote): StockQuote {
