@@ -5,10 +5,14 @@ import ChartScreen from '../src/screens/ChartScreen';
 import * as ctx from '../src/AccountContext';
 import * as flatten from '../src/flatten';
 import { fetchHistory } from '../src/api';
+import { stream } from '../src/marketstoreStream';
 
 jest.mock('../src/AccountContext');
 jest.mock('../src/flatten');
 jest.mock('../src/api');
+jest.mock('../src/marketstoreStream', () => ({
+  stream: { subscribe: jest.fn(() => () => {}) },
+}));
 jest.mock('react-native-webview', () => ({ WebView: () => null }));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
@@ -53,4 +57,15 @@ test('no Exit button when the symbol is not held', async () => {
   });
   await act(async () => {});
   expect(JSON.stringify(tree.toJSON())).not.toContain('Exit');
+});
+
+test('subscribes to the ticker OHLCV stream', async () => {
+  (flatten.holdingsForSymbol as jest.Mock).mockResolvedValue([]);
+  const route = { params: { ticker: 'AAPL' } } as any;
+  const nav = { navigate: jest.fn() } as any;
+  await act(async () => {
+    ReactTestRenderer.create(<ChartScreen route={route} navigation={nav} />);
+  });
+  const keys = (stream.subscribe as jest.Mock).mock.calls.map(c => c[0][0]);
+  expect(keys.some((k: string) => k.startsWith('AAPL/') && k.endsWith('/OHLCV'))).toBe(true);
 });

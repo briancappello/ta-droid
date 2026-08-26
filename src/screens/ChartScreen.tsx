@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -15,6 +21,9 @@ import { fetchHistory, type HistoryResponse } from '../api';
 import { LIGHTWEIGHT_CHARTS_JS } from '../vendor/lightweightCharts';
 import { useAccounts } from '../AccountContext';
 import { holdingsForSymbol, type SymbolHolding } from '../flatten';
+import { freqToTimeframe } from '../marketstore';
+import { stream } from '../marketstoreStream';
+import { barFromBarPayload, easternOffset } from '../chartTime';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Chart'>;
 
@@ -177,18 +186,7 @@ function buildEasternOffsets(timestamps: number[]): number[] {
     return [];
   }
 
-  const fmt = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    timeZoneName: 'shortOffset',
-  });
-
-  const getOffset = (ms: number): number => {
-    const parts = fmt
-      .formatToParts(new Date(ms))
-      .find(p => p.type === 'timeZoneName');
-    const match = parts?.value?.match(/GMT([+-]\d+)/);
-    return match ? parseInt(match[1], 10) * 3600 : -5 * 3600;
-  };
+  const getOffset = easternOffset;
 
   const firstOffset = getOffset(timestamps[0]);
   const lastOffset = getOffset(timestamps[timestamps.length - 1]);
@@ -386,6 +384,11 @@ function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
       scaleMargins: { top: 0.8, bottom: 0 },
     });
     volumeSeries.setData(${JSON.stringify(volumes)});
+
+    window.__pushBar = function (b) {
+      candleSeries.update({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close });
+      volumeSeries.update({ time: b.time, value: b.volume, color: b.close >= b.open ? '#4caf50' : '#f44336' });
+    };
 
     ${
       sma20.length > 0
@@ -589,6 +592,7 @@ function FreqDropdown({
 export default function ChartScreen({ route, navigation }: Props) {
   const { ticker } = route.params;
   const insets = useSafeAreaInsets();
+  const webRef = useRef<WebView>(null);
   const { accounts, activeId } = useAccounts();
   const [rangeIndex, setRangeIndex] = useState(4); // default 1Y
   const [freq, setFreq] = useState('D');
@@ -643,6 +647,20 @@ export default function ChartScreen({ route, navigation }: Props) {
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, [ticker, freq, activeRange]);
+
+  useEffect(() => {
+    const key = `${ticker}/${freqToTimeframe(freq)}/OHLCV`;
+    const off = stream.subscribe([key], msg => {
+      if (msg.data.msg_type !== 'bar') {
+        return;
+      }
+      const bar = barFromBarPayload(msg.data.payload);
+      webRef.current?.injectJavaScript(
+        `window.__pushBar && window.__pushBar(${JSON.stringify(bar)}); true;`,
+      );
+    });
+    return off;
+  }, [ticker, freq]);
 
   return (
     <View style={styles.container}>
@@ -711,6 +729,7 @@ export default function ChartScreen({ route, navigation }: Props) {
         </View>
       ) : html ? (
         <WebView
+          ref={webRef}
           key={html.length}
           source={{ html }}
           style={styles.webview}
