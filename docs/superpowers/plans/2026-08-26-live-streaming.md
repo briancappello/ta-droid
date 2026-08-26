@@ -434,7 +434,7 @@ git commit -m "feat: shared MarketStore WebSocket stream client with reconnect"
 ### Task 3: App — Watchlists live streaming
 
 **Files:**
-- Modify: `src/watchlists.ts` (add row type, mapper, stream key, REST entries fetch)
+- Modify: `src/watchlists.ts` (add row type, mapper, stream key, REST entries fetch; remove now-dead `fetchWatchlistSymbols`)
 - Modify: `src/screens/WatchlistsScreen.tsx` (subscribe + render price/pct)
 - Modify: `__tests__/watchlists.test.ts` (mapper test)
 - Modify: `__tests__/watchlistsScreen.test.tsx` (stream mock + assertions)
@@ -474,7 +474,18 @@ Expected: FAIL — `toWatchRow`/`watchlistStreamKey` are not exported.
 
 - [ ] **Step 3: Implement in `src/watchlists.ts`**
 
-Append to `src/watchlists.ts`:
+First delete the now-dead `fetchWatchlistSymbols` (its only caller was the
+watchlist screen's old quotes effect, replaced in Step 5):
+
+```ts
+// Remove this function — no callers remain after Step 5.
+export async function fetchWatchlistSymbols(id: string): Promise<string[]> {
+  const wl = await getWatchlist(id);
+  return wl.entries.map(e => e.symbol);
+}
+```
+
+Then append to `src/watchlists.ts`:
 
 ```ts
 export type WatchRow = {
@@ -589,8 +600,11 @@ Replace the row render (`WatchlistsScreen.tsx:94-116`) with:
               <Text style={styles.symbol}>{row.symbol}</Text>
               <Text style={[styles.change, { color }]}>
                 {row.price != null ? formatMoney(row.price) : '--'}
+                {row.change != null
+                  ? `  ${sign}${formatMoney(row.change, row.price ?? row.change)}`
+                  : ''}
                 {row.changePct != null
-                  ? `  ${sign}${formatPercent(row.changePct)}%`
+                  ? ` (${sign}${formatPercent(row.changePct)}%)`
                   : ''}
               </Text>
             </TouchableOpacity>
@@ -719,15 +733,20 @@ Expected: FAIL — `Cannot find module '../src/chartTime'`.
 - [ ] **Step 3: Implement `src/chartTime.ts`**
 
 ```ts
+// One shared formatter — constructing Intl.DateTimeFormat is expensive, and
+// buildEasternOffsets calls easternOffset O(log n) times per render. Hoisted
+// to module scope so we build it once, mirroring the closure the old inline
+// getOffset used.
+const easternFmt = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York',
+  timeZoneName: 'shortOffset',
+});
+
 // Eastern-time offset (seconds) for a given instant, matching the chart's
 // "fake-UTC shifted to Eastern" time axis. Mirrors the getOffset logic in
 // ChartScreen.buildEasternOffsets so live bars align with historical bars.
 export function easternOffset(ms: number): number {
-  const fmt = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    timeZoneName: 'shortOffset',
-  });
-  const part = fmt
+  const part = easternFmt
     .formatToParts(new Date(ms))
     .find(p => p.type === 'timeZoneName');
   const match = part?.value?.match(/GMT([+-]\d+)/);
