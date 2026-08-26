@@ -28,6 +28,7 @@ jest.mock('react-native-config', () => ({
   __esModule: true,
   default: {
     API_BASE_URL: 'https://example.test',
+    MARKETSTORE_BASE_URL: 'https://ms.test',
     ACCOUNTS_JSON: '[]',
     // CREDENTIALS_BLOB_JSON left undefined → provisioning gate resolves 'ready'
   },
