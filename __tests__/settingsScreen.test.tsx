@@ -21,7 +21,7 @@ beforeEach(() => {
     loading: false,
   });
   (backend.useBackend as jest.Mock).mockReturnValue({
-    health: 'up',
+    health: { marketstore: 'up', fatechan: 'up' },
     setHealth: () => {},
     refresh: async () => {},
   });

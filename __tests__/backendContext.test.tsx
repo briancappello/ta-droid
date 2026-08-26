@@ -4,12 +4,14 @@ import ReactTestRenderer, { act } from 'react-test-renderer';
 import { Text } from 'react-native';
 import { BackendProvider, useBackend } from '../src/BackendContext';
 import * as techan from '../src/techan';
+import * as marketstore from '../src/marketstore';
 jest.mock('../src/techan');
+jest.mock('../src/marketstore');
 
 function Probe({ onReady }: { onReady: (v: ReturnType<typeof useBackend>) => void }) {
   const v = useBackend();
   onReady(v);
-  return <Text>{v.health}</Text>;
+  return <Text>{v.health.fatechan}</Text>;
 }
 
 class Boundary extends React.Component<{
@@ -33,7 +35,10 @@ test('health defaults to unknown', async () => {
       </BackendProvider>,
     );
   });
-  expect(latest!.health).toBe('unknown');
+  expect(latest!.health).toEqual({
+    marketstore: 'unknown',
+    fatechan: 'unknown',
+  });
 });
 
 test('setHealth updates health', async () => {
@@ -46,9 +51,9 @@ test('setHealth updates health', async () => {
     );
   });
   await act(async () => {
-    latest!.setHealth('down');
+    latest!.setHealth({ marketstore: 'down', fatechan: 'down' });
   });
-  expect(latest!.health).toBe('down');
+  expect(latest!.health).toEqual({ marketstore: 'down', fatechan: 'down' });
 });
 
 test('useBackend throws outside provider', async () => {
@@ -73,7 +78,8 @@ test('useBackend throws outside provider', async () => {
   expect(captured!.message).toMatch(/useBackend must be used within BackendProvider/);
 });
 
-test('refresh sets health from pingHealth', async () => {
+test('refresh sets per-backend health from independent probes', async () => {
+  (marketstore.pingMarketstore as jest.Mock).mockResolvedValue(false);
   (techan.pingHealth as jest.Mock).mockResolvedValue(true);
   let latest: any = null;
   await act(async () => {
@@ -86,11 +92,13 @@ test('refresh sets health from pingHealth', async () => {
   await act(async () => {
     await latest.refresh();
   });
-  expect(latest.health).toBe('up');
+  // MarketStore down but fa-techan up — reported independently.
+  expect(latest.health).toEqual({ marketstore: 'down', fatechan: 'up' });
 
+  (marketstore.pingMarketstore as jest.Mock).mockResolvedValue(true);
   (techan.pingHealth as jest.Mock).mockResolvedValue(false);
   await act(async () => {
     await latest.refresh();
   });
-  expect(latest.health).toBe('down');
+  expect(latest.health).toEqual({ marketstore: 'up', fatechan: 'down' });
 });

@@ -3,6 +3,7 @@ import {
   getQuotes,
   getWatchlists,
   getWatchlist,
+  pingMarketstore,
   freqToTimeframe,
 } from '../src/marketstore';
 
@@ -76,4 +77,12 @@ test('non-2xx surfaces the server error message', async () => {
 test('network failure surfaces a friendly message', async () => {
   jest.spyOn(global, 'fetch').mockRejectedValue(new Error('down'));
   await expect(getQuotes(['AAPL'])).rejects.toThrow(/Can't reach market data/);
+});
+
+test('pingMarketstore returns true on ok, false on failure', async () => {
+  jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true } as Response);
+  expect(await pingMarketstore()).toBe(true);
+  jest.restoreAllMocks();
+  jest.spyOn(global, 'fetch').mockRejectedValue(new Error('down'));
+  expect(await pingMarketstore()).toBe(false);
 });

@@ -124,6 +124,7 @@ function App() {
           <BackendProvider poll>
             <NavigationContainer>
               <Drawer.Navigator
+                initialRouteName="Watchlists"
                 screenOptions={{
                   headerShown: false,
                   drawerStyle: { backgroundColor: '#16213e' },

@@ -7,12 +7,20 @@ import React, {
   useState,
 } from 'react';
 import { pingHealth } from './techan';
+import { pingMarketstore } from './marketstore';
 
 export type BackendHealth = 'up' | 'down' | 'unknown';
+export type BackendName = 'marketstore' | 'fatechan';
+export type HealthByBackend = Record<BackendName, BackendHealth>;
+
+const UNKNOWN: HealthByBackend = {
+  marketstore: 'unknown',
+  fatechan: 'unknown',
+};
 
 type Ctx = {
-  health: BackendHealth;
-  setHealth: (h: BackendHealth) => void;
+  health: HealthByBackend;
+  setHealth: (h: HealthByBackend) => void;
   refresh: () => Promise<void>;
 };
 
@@ -25,11 +33,16 @@ export function BackendProvider({
   children: React.ReactNode;
   poll?: boolean;
 }) {
-  const [health, setHealth] = useState<BackendHealth>('unknown');
+  const [health, setHealth] = useState<HealthByBackend>(UNKNOWN);
 
   const refresh = useCallback(async () => {
-    const ok = await pingHealth();
-    setHealth(ok ? 'up' : 'down');
+    // Probe each backend independently so one being down never blocks the
+    // other — the app stays usable on MarketStore alone.
+    const [ms, fa] = await Promise.all([pingMarketstore(), pingHealth()]);
+    setHealth({
+      marketstore: ms ? 'up' : 'down',
+      fatechan: fa ? 'up' : 'down',
+    });
   }, []);
 
   useEffect(() => {

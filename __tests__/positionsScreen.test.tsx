@@ -48,7 +48,7 @@ beforeEach(() => {
     loading: false,
   });
   (backend.useBackend as jest.Mock).mockReturnValue({
-    health: 'up', setHealth: () => {}, refresh: async () => {},
+    health: { marketstore: 'up', fatechan: 'up' }, setHealth: () => {}, refresh: async () => {},
   });
   mockDriver([held('AAPL', '100')]);
 });

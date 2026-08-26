@@ -14,7 +14,7 @@ const nav = { navigate: jest.fn(), openDrawer: jest.fn() } as any;
 
 beforeEach(() => {
   (backend.useBackend as jest.Mock).mockReturnValue({
-    health: 'up', setHealth: () => {}, refresh: async () => {},
+    health: { marketstore: 'up', fatechan: 'up' }, setHealth: () => {}, refresh: async () => {},
   });
   (watchlists.fetchWatchlists as jest.Mock).mockResolvedValue([
     { id: 'w1', name: 'Breakouts' }, { id: 'w2', name: 'Oversold' },

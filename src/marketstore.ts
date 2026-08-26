@@ -118,3 +118,17 @@ export function getWatchlist(name: string): Promise<MarketstoreWatchlist> {
     `/v1/watchlists/${encodeURIComponent(name)}`,
   );
 }
+
+export async function pingMarketstore(): Promise<boolean> {
+  try {
+    // ponytail: a bogus symbol returns a tiny `{"quotes":[]}` 200 when the
+    // server is up (503 while it's still starting) — cheap liveness without
+    // downloading the whole /v1/symbols catalog on every poll.
+    const res = await fetch(`${BASE}/v1/quotes?symbols=__PING__&timeframe=1D`, {
+      headers: AUTH ? { Authorization: AUTH } : undefined,
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}

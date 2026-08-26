@@ -6,16 +6,19 @@ import * as backend from '../src/BackendContext';
 
 jest.mock('../src/BackendContext');
 
-function mockHealth(health: 'up' | 'down' | 'unknown') {
+function mockHealth(
+  marketstore: 'up' | 'down' | 'unknown',
+  fatechan: 'up' | 'down' | 'unknown',
+) {
   (backend.useBackend as jest.Mock).mockReturnValue({
-    health,
+    health: { marketstore, fatechan },
     setHealth: () => {},
     refresh: async () => {},
   });
 }
 
-test('renders the title and a BE chip', async () => {
-  mockHealth('up');
+test('renders the title and per-backend MS/FA chips', async () => {
+  mockHealth('up', 'up');
   let tree!: ReactTestRenderer.ReactTestRenderer;
   await act(async () => {
     tree = ReactTestRenderer.create(
@@ -24,25 +27,20 @@ test('renders the title and a BE chip', async () => {
   });
   const json = JSON.stringify(tree.toJSON());
   expect(json).toContain('Positions');
-  expect(json).toContain('BE');
+  expect(json).toContain('MS');
+  expect(json).toContain('FA');
 });
 
-test('BE dot is green when up and red when down', async () => {
-  mockHealth('up');
-  let up!: ReactTestRenderer.ReactTestRenderer;
+test('dots reflect each backend independently', async () => {
+  // MarketStore up (green), fa-techan down (red) at the same time.
+  mockHealth('up', 'down');
+  let tree!: ReactTestRenderer.ReactTestRenderer;
   await act(async () => {
-    up = ReactTestRenderer.create(
+    tree = ReactTestRenderer.create(
       <AppHeader title="X" onMenuPress={() => {}} />,
     );
   });
-  expect(JSON.stringify(up.toJSON())).toContain('#4caf50');
-
-  mockHealth('down');
-  let down!: ReactTestRenderer.ReactTestRenderer;
-  await act(async () => {
-    down = ReactTestRenderer.create(
-      <AppHeader title="X" onMenuPress={() => {}} />,
-    );
-  });
-  expect(JSON.stringify(down.toJSON())).toContain('#f44336');
+  const json = JSON.stringify(tree.toJSON());
+  expect(json).toContain('#4caf50');
+  expect(json).toContain('#f44336');
 });

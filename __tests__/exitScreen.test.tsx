@@ -18,7 +18,7 @@ beforeEach(() => {
     setActiveId: () => {}, reload: async () => {}, loading: false,
   });
   (backend.useBackend as jest.Mock).mockReturnValue({
-    health: 'up', setHealth: () => {}, refresh: async () => {},
+    health: { marketstore: 'up', fatechan: 'up' }, setHealth: () => {}, refresh: async () => {},
   });
   (flatten.holdingsForSymbol as jest.Mock).mockResolvedValue([
     { account, position: {

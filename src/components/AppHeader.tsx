@@ -45,8 +45,14 @@ export function AppHeader({
         disabled={!onBackendPress}
         hitSlop={8}
       >
-        <View style={[styles.dot, { backgroundColor: dotColor(health) }]} />
-        <Text style={styles.chipText}>BE</Text>
+        <View
+          style={[styles.dot, { backgroundColor: dotColor(health.marketstore) }]}
+        />
+        <Text style={styles.chipText}>MS</Text>
+        <View
+          style={[styles.dot, { backgroundColor: dotColor(health.fatechan) }]}
+        />
+        <Text style={styles.chipText}>FA</Text>
       </TouchableOpacity>
       {onRefreshPress != null && (
         <TouchableOpacity onPress={onRefreshPress} hitSlop={8}>
