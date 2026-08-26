@@ -11,16 +11,19 @@ import { AppHeader } from '../components/AppHeader';
 import { WatchlistPicker } from '../components/WatchlistPicker';
 import {
   fetchWatchlists,
-  fetchWatchlistSymbols,
+  fetchWatchlistEntries,
+  toWatchRow,
+  watchlistStreamKey,
   type Watchlist,
+  type WatchRow,
 } from '../watchlists';
-import { apiQuoteToStockQuote, fetchQuotes, type StockQuote } from '../api';
 import { formatMoney, formatPercent } from '../format';
+import { stream } from '../marketstoreStream';
 
 export default function WatchlistsScreen({ navigation }: { navigation: any }) {
   const [lists, setLists] = useState<Watchlist[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [rows, setRows] = useState<StockQuote[]>([]);
+  const [rows, setRows] = useState<WatchRow[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
@@ -45,19 +48,26 @@ export default function WatchlistsScreen({ navigation }: { navigation: any }) {
       return;
     }
     let alive = true;
-    (async () => {
-      try {
-        const symbols = await fetchWatchlistSymbols(selectedId);
-        const quotes = await fetchQuotes(symbols);
+    // Instant REST paint (already includes price + pct_change).
+    fetchWatchlistEntries(selectedId)
+      .then(r => {
         if (alive) {
-          setRows(quotes.map(apiQuoteToStockQuote));
+          setRows(r);
         }
-      } catch (e: any) {
-        console.warn('Watchlist symbols fetch failed:', e.message);
+      })
+      .catch(() => {});
+    // Live re-ranking + prices.
+    const off = stream.subscribe([watchlistStreamKey(selectedId)], msg => {
+      if (msg.data.msg_type === 'watchlist_update') {
+        const syms: any[] = msg.data.payload?.symbols ?? [];
+        if (alive) {
+          setRows(syms.map(toWatchRow));
+        }
       }
-    })();
+    });
     return () => {
       alive = false;
+      off();
     };
   }, [selectedId]);
 
@@ -93,24 +103,29 @@ export default function WatchlistsScreen({ navigation }: { navigation: any }) {
       />
       <ScrollView>
         {rows.map((row, i) => {
-          const color = row.change >= 0 ? '#4caf50' : '#f44336';
-          const sign = row.change >= 0 ? '+' : '';
+          const up = (row.changePct ?? 0) >= 0;
+          const color = up ? '#4caf50' : '#f44336';
+          const sign = up ? '+' : '';
           return (
             <TouchableOpacity
-              key={`${row.ticker}-${i}`}
+              key={`${row.symbol}-${i}`}
               style={styles.row}
               onPress={() =>
                 navigation.navigate('ChartStack', {
                   screen: 'Chart',
-                  params: { ticker: row.ticker },
+                  params: { ticker: row.symbol },
                 })
               }
             >
-              <Text style={styles.symbol}>{row.ticker}</Text>
+              <Text style={styles.symbol}>{row.symbol}</Text>
               <Text style={[styles.change, { color }]}>
-                {sign}
-                {formatMoney(row.change, row.lastPrice)} ({sign}
-                {formatPercent(row.changePercent)}%)
+                {row.price != null ? formatMoney(row.price) : '--'}
+                {row.change != null
+                  ? `  ${sign}${formatMoney(row.change, row.price ?? row.change)}`
+                  : ''}
+                {row.changePct != null
+                  ? ` (${sign}${formatPercent(row.changePct)}%)`
+                  : ''}
               </Text>
             </TouchableOpacity>
           );

@@ -4,11 +4,11 @@ import ReactTestRenderer, { act } from 'react-test-renderer';
 import WatchlistsScreen from '../src/screens/WatchlistsScreen';
 import * as backend from '../src/BackendContext';
 import * as watchlists from '../src/watchlists';
-import * as api from '../src/api';
+import * as streamMod from '../src/marketstoreStream';
 
 jest.mock('../src/BackendContext');
 jest.mock('../src/watchlists');
-jest.mock('../src/api');
+jest.mock('../src/marketstoreStream');
 
 const nav = { navigate: jest.fn(), openDrawer: jest.fn() } as any;
 
@@ -19,16 +19,22 @@ beforeEach(() => {
   (watchlists.fetchWatchlists as jest.Mock).mockResolvedValue([
     { id: 'w1', name: 'Breakouts' }, { id: 'w2', name: 'Oversold' },
   ]);
-  (watchlists.fetchWatchlistSymbols as jest.Mock).mockResolvedValue(['SMCI']);
-  (api.fetchQuotes as jest.Mock).mockResolvedValue([
-    { ticker: 'SMCI', date: '2026-01-01', open: 1, high: 1, low: 1, close: 42, volume: 1, prev_close: 40 },
+  (watchlists.fetchWatchlistEntries as jest.Mock).mockResolvedValue([
+    { symbol: 'SMCI', price: 42, change: 2, changePct: 5 },
   ]);
-  (api.apiQuoteToStockQuote as jest.Mock).mockImplementation((q) => ({
-    ticker: q.ticker, name: q.ticker, lastPrice: q.close, change: 2, changePercent: 5, time: '9:41',
+  (watchlists.watchlistStreamKey as jest.Mock).mockImplementation(
+    (id: string) => `WATCHLISTS/1Min/${id}`,
+  );
+  (watchlists.toWatchRow as jest.Mock).mockImplementation((s: any) => ({
+    symbol: s.symbol,
+    price: s.price ?? null,
+    change: null,
+    changePct: s.pct_change ?? null,
   }));
+  (streamMod.stream as any).subscribe = jest.fn(() => () => {});
 });
 
-test('renders the selected watchlist and its symbols', async () => {
+test('renders the selected watchlist with streamed price rows', async () => {
   let tree!: ReactTestRenderer.ReactTestRenderer;
   await act(async () => {
     tree = ReactTestRenderer.create(<WatchlistsScreen navigation={nav} />);
@@ -37,6 +43,7 @@ test('renders the selected watchlist and its symbols', async () => {
   const json = JSON.stringify(tree.toJSON());
   expect(json).toContain('Breakouts');
   expect(json).toContain('SMCI');
+  expect(json).toContain('42.00');
 });
 
 test('shows unavailable when there are no lists', async () => {
