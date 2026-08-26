@@ -1,4 +1,10 @@
-import { getBars, getQuotes, freqToTimeframe } from '../src/marketstore';
+import {
+  getBars,
+  getQuotes,
+  getWatchlists,
+  getWatchlist,
+  freqToTimeframe,
+} from '../src/marketstore';
 
 afterEach(() => jest.restoreAllMocks());
 
@@ -36,6 +42,26 @@ test('getQuotes joins symbols and defaults timeframe to 1D', async () => {
   expect(url).toContain('https://ms.test/v1/quotes');
   expect(url).toContain('symbols=AAPL%2CMSFT');
   expect(url).toContain('timeframe=1D');
+});
+
+test('getWatchlists requests the watchlists collection', async () => {
+  const spy = jest.spyOn(global, 'fetch').mockResolvedValue({
+    ok: true,
+    json: async () => ({ watchlists: [] }),
+  } as unknown as Response);
+  await getWatchlists();
+  expect(spy.mock.calls[0][0]).toContain('https://ms.test/v1/watchlists');
+});
+
+test('getWatchlist requests a single watchlist by name', async () => {
+  const spy = jest.spyOn(global, 'fetch').mockResolvedValue({
+    ok: true,
+    json: async () => ({ name: 'MOMENTUM', entries: [] }),
+  } as unknown as Response);
+  await getWatchlist('MOMENTUM');
+  expect(spy.mock.calls[0][0]).toContain(
+    'https://ms.test/v1/watchlists/MOMENTUM',
+  );
 });
 
 test('non-2xx surfaces the server error message', async () => {

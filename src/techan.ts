@@ -7,7 +7,6 @@ export type StrategyPosition = {
   symbol: string;
   strategy: string;
 };
-export type Watchlist = { id: string; name: string };
 
 async function getJson<T>(path: string, fallback: T): Promise<T> {
   try {
@@ -32,16 +31,4 @@ export async function pingHealth(): Promise<boolean> {
 
 export function fetchStrategyPositions(): Promise<StrategyPosition[]> {
   return getJson<StrategyPosition[]>('/strategies/positions', []);
-}
-
-export function fetchWatchlists(): Promise<Watchlist[]> {
-  return getJson<Watchlist[]>('/watchlists', []);
-}
-
-export async function fetchWatchlistSymbols(id: string): Promise<string[]> {
-  const rows = await getJson<{ symbol: string }[]>(
-    `/watchlists/${encodeURIComponent(id)}`,
-    [],
-  );
-  return rows.map(r => r.symbol);
 }

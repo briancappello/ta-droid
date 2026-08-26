@@ -3,11 +3,11 @@ import React from 'react';
 import ReactTestRenderer, { act } from 'react-test-renderer';
 import WatchlistsScreen from '../src/screens/WatchlistsScreen';
 import * as backend from '../src/BackendContext';
-import * as techan from '../src/techan';
+import * as watchlists from '../src/watchlists';
 import * as api from '../src/api';
 
 jest.mock('../src/BackendContext');
-jest.mock('../src/techan');
+jest.mock('../src/watchlists');
 jest.mock('../src/api');
 
 const nav = { navigate: jest.fn(), openDrawer: jest.fn() } as any;
@@ -16,10 +16,10 @@ beforeEach(() => {
   (backend.useBackend as jest.Mock).mockReturnValue({
     health: 'up', setHealth: () => {}, refresh: async () => {},
   });
-  (techan.fetchWatchlists as jest.Mock).mockResolvedValue([
+  (watchlists.fetchWatchlists as jest.Mock).mockResolvedValue([
     { id: 'w1', name: 'Breakouts' }, { id: 'w2', name: 'Oversold' },
   ]);
-  (techan.fetchWatchlistSymbols as jest.Mock).mockResolvedValue(['SMCI']);
+  (watchlists.fetchWatchlistSymbols as jest.Mock).mockResolvedValue(['SMCI']);
   (api.fetchQuotes as jest.Mock).mockResolvedValue([
     { ticker: 'SMCI', date: '2026-01-01', open: 1, high: 1, low: 1, close: 42, volume: 1, prev_close: 40 },
   ]);
@@ -40,7 +40,7 @@ test('renders the selected watchlist and its symbols', async () => {
 });
 
 test('shows unavailable when there are no lists', async () => {
-  (techan.fetchWatchlists as jest.Mock).mockResolvedValue([]);
+  (watchlists.fetchWatchlists as jest.Mock).mockResolvedValue([]);
   let tree!: ReactTestRenderer.ReactTestRenderer;
   await act(async () => {
     tree = ReactTestRenderer.create(<WatchlistsScreen navigation={nav} />);

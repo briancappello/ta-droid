@@ -94,3 +94,27 @@ export function getQuotes(
   const params = new URLSearchParams({ symbols: symbols.join(','), timeframe });
   return msGet<{ quotes: MarketstoreQuote[] }>(`/v1/quotes?${params}`);
 }
+
+export type MarketstoreWatchlistEntry = {
+  symbol: string;
+  rank: number;
+  sector: string;
+  fields: Record<string, number>;
+};
+
+export type MarketstoreWatchlist = {
+  name: string;
+  entries: MarketstoreWatchlistEntry[];
+};
+
+export function getWatchlists(): Promise<{
+  watchlists: MarketstoreWatchlist[];
+}> {
+  return msGet<{ watchlists: MarketstoreWatchlist[] }>('/v1/watchlists');
+}
+
+export function getWatchlist(name: string): Promise<MarketstoreWatchlist> {
+  return msGet<MarketstoreWatchlist>(
+    `/v1/watchlists/${encodeURIComponent(name)}`,
+  );
+}

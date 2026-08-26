@@ -1,9 +1,5 @@
 // __tests__/techan.test.ts
-import {
-  pingHealth,
-  fetchStrategyPositions,
-  fetchWatchlists,
-} from '../src/techan';
+import { pingHealth, fetchStrategyPositions } from '../src/techan';
 
 afterEach(() => jest.restoreAllMocks());
 
@@ -32,9 +28,4 @@ test('fetchStrategyPositions returns rows, [] on failure', async () => {
   jest.restoreAllMocks();
   jest.spyOn(global, 'fetch').mockRejectedValue(new Error('x'));
   expect(await fetchStrategyPositions()).toEqual([]);
-});
-
-test('fetchWatchlists [] on non-ok', async () => {
-  mockFetch(500, {});
-  expect(await fetchWatchlists()).toEqual([]);
 });

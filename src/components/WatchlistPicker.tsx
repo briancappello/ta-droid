@@ -1,7 +1,7 @@
 // src/components/WatchlistPicker.tsx
 import React, { useState } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import type { Watchlist } from '../techan';
+import type { Watchlist } from '../watchlists';
 
 export function WatchlistPicker({
   lists,

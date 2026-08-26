@@ -13,7 +13,7 @@ import {
   fetchWatchlists,
   fetchWatchlistSymbols,
   type Watchlist,
-} from '../techan';
+} from '../watchlists';
 import { apiQuoteToStockQuote, fetchQuotes, type StockQuote } from '../api';
 
 export default function WatchlistsScreen({ navigation }: { navigation: any }) {
