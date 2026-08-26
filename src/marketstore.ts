@@ -121,10 +121,9 @@ export function getWatchlist(name: string): Promise<MarketstoreWatchlist> {
 
 export async function pingMarketstore(): Promise<boolean> {
   try {
-    // ponytail: a bogus symbol returns a tiny `{"quotes":[]}` 200 when the
-    // server is up (503 while it's still starting) — cheap liveness without
-    // downloading the whole /v1/symbols catalog on every poll.
-    const res = await fetch(`${BASE}/v1/quotes?symbols=__PING__&timeframe=1D`, {
+    // Dedicated liveness endpoint: 200 when queryable, 503 while starting.
+    // Touches no catalog data and logs nothing (unlike a bogus-symbol query).
+    const res = await fetch(`${BASE}/v1/health`, {
       headers: AUTH ? { Authorization: AUTH } : undefined,
     });
     return res.ok;

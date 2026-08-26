@@ -79,9 +79,12 @@ test('network failure surfaces a friendly message', async () => {
   await expect(getQuotes(['AAPL'])).rejects.toThrow(/Can't reach market data/);
 });
 
-test('pingMarketstore returns true on ok, false on failure', async () => {
-  jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true } as Response);
+test('pingMarketstore probes /v1/health, true on ok / false on failure', async () => {
+  const spy = jest
+    .spyOn(global, 'fetch')
+    .mockResolvedValue({ ok: true } as Response);
   expect(await pingMarketstore()).toBe(true);
+  expect(spy.mock.calls[0][0]).toBe('https://ms.test/v1/health');
   jest.restoreAllMocks();
   jest.spyOn(global, 'fetch').mockRejectedValue(new Error('down'));
   expect(await pingMarketstore()).toBe(false);
