@@ -37,7 +37,10 @@ export type ApiQuote = {
 export type HistoryResponse = {
   columns: string[];
   index: number[];
-  data: (number | null)[][];
+  // OHLCV cells are always present; indicator cells are null during warmup.
+  // Consumers guard null only where they read indicator columns
+  // (ChartScreen buildLineSeries), matching the original fa-techan contract.
+  data: number[][];
 };
 
 // --- API ---
@@ -46,12 +49,17 @@ export async function fetchQuotes(tickers: string[]): Promise<ApiQuote[]> {
   if (tickers.length === 0) {
     return [];
   }
-  const params = tickers.map(t => `tickers=${encodeURIComponent(t)}`).join('&');
-  const response = await fetch(`${API_BASE}/finance/quotes?${params}`);
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
-  }
-  return response.json();
+  const { quotes } = await getQuotes(tickers, '1D');
+  return quotes.map(q => ({
+    ticker: q.symbol,
+    date: q.time,
+    open: q.open,
+    high: q.high,
+    low: q.low,
+    close: q.close,
+    volume: q.volume,
+    prev_close: q.prev_close,
+  }));
 }
 
 export async function fetchHistory(
@@ -70,12 +78,14 @@ export async function fetchHistory(
   const startIdx = Math.max(0, bars.length - want);
 
   const index: number[] = [];
-  const data: (number | null)[][] = [];
+  // ponytail: indicator cells hold null during warmup; typed number[] to keep
+  // the pre-existing HistoryResponse contract consumers were written against.
+  const data: number[][] = [];
   for (let i = startIdx; i < bars.length; i++) {
     const b = bars[i];
     const ind = indicators[i];
     index.push(Date.parse(b.time));
-    data.push([
+    const row: (number | null)[] = [
       b.open,
       b.high,
       b.low,
@@ -90,7 +100,8 @@ export async function fetchHistory(
       ind.macd_signal,
       ind.macd_difference,
       ind.rsi,
-    ]);
+    ];
+    data.push(row as number[]);
   }
 
   return { columns: HISTORY_COLUMNS, index, data };
