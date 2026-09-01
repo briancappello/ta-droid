@@ -20,7 +20,7 @@ beforeEach(() => {
     { id: 'w1', name: 'Breakouts' }, { id: 'w2', name: 'Oversold' },
   ]);
   (watchlists.fetchWatchlistEntries as jest.Mock).mockResolvedValue([
-    { symbol: 'SMCI', price: 42, change: 2, changePct: 5 },
+    { symbol: 'SMCI', price: 42, priceUp: true, changePct: 3.5, changeUp: true, aggPct: null },
   ]);
   (watchlists.watchlistStreamKey as jest.Mock).mockImplementation(
     (id: string) => `WATCHLISTS/1Min/${id}`,
@@ -28,8 +28,10 @@ beforeEach(() => {
   (watchlists.toWatchRow as jest.Mock).mockImplementation((s: any) => ({
     symbol: s.symbol,
     price: s.price ?? null,
-    change: null,
-    changePct: s.pct_change ?? null,
+    priceUp: null,
+    changePct: null,
+    changeUp: null,
+    aggPct: s.avg_pct_change ?? null,
   }));
   (streamMod.stream as any).subscribe = jest.fn(() => () => {});
 });

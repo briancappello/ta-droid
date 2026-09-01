@@ -103,9 +103,13 @@ export default function WatchlistsScreen({ navigation }: { navigation: any }) {
       />
       <ScrollView>
         {rows.map((row, i) => {
-          const up = (row.changePct ?? 0) >= 0;
-          const color = up ? '#4caf50' : '#f44336';
-          const sign = up ? '+' : '';
+          const green = '#4caf50';
+          const red = '#f44336';
+          // Price colors against yesterday's close (day move); the change is
+          // price - today's open and colors against the open.
+          const priceColor =
+            row.priceUp == null ? '#e0e0e0' : row.priceUp ? green : red;
+          const changeColor = row.changeUp ? green : red;
           return (
             <TouchableOpacity
               key={`${row.symbol}-${i}`}
@@ -118,15 +122,33 @@ export default function WatchlistsScreen({ navigation }: { navigation: any }) {
               }
             >
               <Text style={styles.symbol}>{row.symbol}</Text>
-              <Text style={[styles.change, { color }]}>
-                {row.price != null ? formatMoney(row.price) : '--'}
-                {row.change != null
-                  ? `  ${sign}${formatMoney(row.change, row.price ?? row.change)}`
-                  : ''}
-                {row.changePct != null
-                  ? ` (${sign}${formatPercent(row.changePct)}%)`
-                  : ''}
-              </Text>
+              <View style={styles.quote}>
+                {row.price != null ? (
+                  <>
+                    <Text style={[styles.price, { color: priceColor }]}>
+                      {formatMoney(row.price)}
+                    </Text>
+                    {row.changePct != null && (
+                      <Text style={[styles.change, { color: changeColor }]}>
+                        {row.changePct >= 0 ? '+' : ''}
+                        {formatPercent(row.changePct)}%
+                      </Text>
+                    )}
+                  </>
+                ) : row.aggPct != null ? (
+                  <Text
+                    style={[
+                      styles.price,
+                      { color: row.aggPct >= 0 ? green : red },
+                    ]}
+                  >
+                    {row.aggPct >= 0 ? '+' : ''}
+                    {formatPercent(row.aggPct)}%
+                  </Text>
+                ) : (
+                  <Text style={[styles.price, { color: '#e0e0e0' }]}>--</Text>
+                )}
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -149,5 +171,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#22314f',
   },
   symbol: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  change: { fontSize: 14, fontWeight: '600' },
+  quote: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  price: { fontSize: 16, fontWeight: '700' },
+  change: { fontSize: 12, fontWeight: '600' },
 });
