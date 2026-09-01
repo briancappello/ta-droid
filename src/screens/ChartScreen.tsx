@@ -746,15 +746,20 @@ export default function ChartScreen({ route, navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [holdings, setHoldings] = useState<SymbolHolding[]>([]);
   const [lastPrice, setLastPrice] = useState<number | null>(null);
-  const [symInput, setSymInput] = useState('');
+  // The header symbol IS the input: it shows the live ticker, and typing over
+  // it switches the chart. Re-sync whenever ticker changes from elsewhere
+  // (drawer, watchlist tap, submitSymbol's own setParams).
+  const [symInput, setSymInput] = useState(ticker);
+  useEffect(() => setSymInput(ticker), [ticker]);
 
   // Switch the chart to a typed symbol. ticker drives the data-load, holdings,
   // and stream effects, so setParams reloads everything in place.
   const submitSymbol = useCallback(() => {
     const next = symInput.trim().toUpperCase();
-    setSymInput('');
     if (next && next !== ticker) {
       navigation.setParams({ ticker: next });
+    } else {
+      setSymInput(ticker); // empty or unchanged — snap back to the real ticker
     }
   }, [symInput, ticker, navigation]);
 
@@ -845,24 +850,23 @@ export default function ChartScreen({ route, navigation }: Props) {
           >
             <Text style={styles.headerNavIcon}>☰</Text>
           </TouchableOpacity>
-          <Text style={styles.headerSymbol}>{ticker}</Text>
-          {lastPrice != null && (
-            <Text style={styles.headerPrice}>{formatMoney(lastPrice)}</Text>
-          )}
-        </View>
-        <View style={styles.headerRight}>
           <TextInput
-            style={styles.symInput}
+            style={styles.headerSymbol}
             value={symInput}
             onChangeText={setSymInput}
             onSubmitEditing={submitSymbol}
-            placeholder="Sym"
-            placeholderTextColor="#8a97b0"
+            onBlur={() => setSymInput(ticker)}
+            selectTextOnFocus
             autoCapitalize="characters"
             autoCorrect={false}
             returnKeyType="search"
             accessibilityLabel="Switch symbol"
           />
+          {lastPrice != null && (
+            <Text style={styles.headerPrice}>{formatMoney(lastPrice)}</Text>
+          )}
+        </View>
+        <View style={styles.headerRight}>
           <TouchableOpacity
             style={styles.tradeButton}
             accessibilityLabel="Trade"
@@ -967,21 +971,22 @@ const styles = StyleSheet.create({
   },
   headerNavBtn: { paddingVertical: 4, paddingHorizontal: 4 },
   headerNavIcon: { color: '#fff', fontSize: 20 },
-  headerSymbol: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  // Doubles as the symbol TextInput. Explicit padding overrides Android's
+  // larger default input inset; the border makes it read as editable at rest.
+  // minWidth keeps a tappable target for 1-2 letter tickers.
+  headerSymbol: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: '#888', // matches styles.pillText — visible but not shouty
+    borderRadius: 4,
+    minWidth: 68,
+  },
   headerPrice: { color: '#fff', fontSize: 16, fontWeight: '600' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  symInput: {
-    color: '#fff',
-    backgroundColor: '#1a1a2e',
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    fontSize: 13,
-    minWidth: 72,
-    textAlign: 'center',
-  },
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',

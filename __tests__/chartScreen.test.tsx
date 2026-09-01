@@ -106,7 +106,25 @@ test('typing a symbol and submitting switches the chart via setParams', async ()
   await act(async () => {});
   const find = () =>
     tree.root.findAll(n => n.props.accessibilityLabel === 'Switch symbol')[0];
+  expect(find().props.value).toBe('AAPL'); // shows the live ticker, not blank
   act(() => find().props.onChangeText('tsla'));
   act(() => find().props.onSubmitEditing());
   expect(nav.setParams).toHaveBeenCalledWith({ ticker: 'TSLA' });
+});
+
+test('symbol input snaps back to the ticker on a no-op submit', async () => {
+  (flatten.holdingsForSymbol as jest.Mock).mockResolvedValue([]);
+  const route = { params: { ticker: 'AAPL' } } as any;
+  const nav = { navigate: jest.fn(), setParams: jest.fn() } as any;
+  let tree!: ReactTestRenderer.ReactTestRenderer;
+  await act(async () => {
+    tree = ReactTestRenderer.create(<ChartScreen route={route} navigation={nav} />);
+  });
+  await act(async () => {});
+  const find = () =>
+    tree.root.findAll(n => n.props.accessibilityLabel === 'Switch symbol')[0];
+  act(() => find().props.onChangeText(''));
+  act(() => find().props.onSubmitEditing());
+  expect(nav.setParams).not.toHaveBeenCalled();
+  expect(find().props.value).toBe('AAPL');
 });
