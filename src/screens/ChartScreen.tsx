@@ -23,7 +23,13 @@ import { useAccounts } from '../AccountContext';
 import { holdingsForSymbol, type SymbolHolding } from '../flatten';
 import { freqToTimeframe } from '../marketstore';
 import { stream } from '../marketstoreStream';
-import { barFromBarPayload, easternOffset } from '../chartTime';
+import {
+  barFromBarPayload,
+  easternOffset,
+  padSessionGrid,
+  sessionOpenTimes,
+  sessionStartIndex,
+} from '../chartTime';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Chart'>;
 
@@ -42,6 +48,11 @@ type RangeConfig = {
   windowMs: number;
   // How many bars to over-request from the backend (buffer factor)
   requestMultiplier: number;
+  // When set, slice to exactly this many trading sessions instead of by
+  // windowMs. A calendar window leaves a partial extra session hanging off the
+  // left edge (7 days back lands mid-session), which the 5D axis would then
+  // label as a sixth day.
+  sessions?: number;
 };
 
 const HOURS_MS = 60 * 60 * 1000;
@@ -76,18 +87,26 @@ function getRequestBars(range: RangeConfig, freq: string): number {
 function sliceToWindow(
   data: HistoryResponse,
   windowMs: number,
+  sessions?: number,
 ): HistoryResponse {
   if (data.index.length === 0) {
     return data;
   }
-  const latestTs = data.index[data.index.length - 1];
-  const windowStart = latestTs - windowMs;
 
   let startIdx = 0;
-  for (let i = 0; i < data.index.length; i++) {
-    if (data.index[i] >= windowStart) {
-      startIdx = i;
-      break;
+  if (sessions) {
+    // Session-based slicing needs Eastern-shifted times to bucket by trading
+    // day (see TIMEZONE STRATEGY).
+    const eastern = data.index.map(ms => Math.floor(ms / 1000) + easternOffset(ms));
+    startIdx = sessionStartIndex(eastern, sessions);
+  } else {
+    const latestTs = data.index[data.index.length - 1];
+    const windowStart = latestTs - windowMs;
+    for (let i = 0; i < data.index.length; i++) {
+      if (data.index[i] >= windowStart) {
+        startIdx = i;
+        break;
+      }
     }
   }
 
@@ -112,8 +131,10 @@ const RANGES: RangeConfig[] = [
     requestMultiplier: 2,
   },
   {
-    label: '1W',
+    // Labelled 5D because the 7-calendar-day window is 5 trading days.
+    label: '5D',
     defaultFreq: '5min',
+    sessions: 5,
     freqOptions: [
       { label: '5min', value: '5min' },
       { label: '10min', value: '10min' },
@@ -216,7 +237,13 @@ function buildEasternOffsets(timestamps: number[]): number[] {
 
 // --- Chart HTML Builder ---
 
-function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
+function buildChartHtml(
+  data: HistoryResponse,
+  rangeLabel: string,
+  // Bar interval in seconds. When > 0, sessions are padded to a uniform grid of
+  // this interval so each trading day is equally wide (see padSessionGrid).
+  gridIntervalSec = 0,
+): string {
   const colIdx: Record<string, number> = {};
   data.columns.forEach((col, i) => {
     colIdx[col] = i;
@@ -232,10 +259,24 @@ function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
     chartTimes[i] = Math.floor(data.index[i] / 1000) + offsets[i];
   }
 
-  const candles = data.index.map((_ts, i) => {
-    const row = data.data[i];
+  // Every series is drawn over this one slot list, so the panes stay aligned.
+  // When gridIntervalSec is set (the 5D range) each session is padded to the
+  // same slot count, giving every trading day equal width; otherwise slots map
+  // 1:1 onto the bars.
+  const slots = padSessionGrid(chartTimes, gridIntervalSec);
+
+  // One anchor per trading session, at its 09:30 open. The 5D axis draws its
+  // weekday labels here as an overlay (see renderDayLabels below). Taken from
+  // the padded slots so a session missing its 09:30 print still gets one.
+  const sessionOpens = sessionOpenTimes(slots.map(s => s.time));
+
+  const candles = slots.map(({ time, src }) => {
+    if (src < 0) {
+      return { time };
+    }
+    const row = data.data[src];
     return {
-      time: chartTimes[i],
+      time,
       open: row[colIdx.open],
       high: row[colIdx.high],
       low: row[colIdx.low],
@@ -243,31 +284,47 @@ function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
     };
   });
 
-  const volumes = data.index.map((_ts, i) => {
-    const row = data.data[i];
+  const volumes = slots.map(({ time, src }) => {
+    if (src < 0) {
+      return { time };
+    }
+    const row = data.data[src];
     const close = row[colIdx.close];
     const open = row[colIdx.open];
     return {
-      time: chartTimes[i],
+      time,
       value: row[colIdx.volume],
       color: close >= open ? 'rgba(76,175,80,0.3)' : 'rgba(244,67,54,0.3)',
     };
   });
 
-  const buildLineSeries = (colName: string) => {
+  // Emit whitespace points ({ time } with no value) for null/NaN warmup bars
+  // instead of dropping them, so every pane (main, MACD, RSI) has the SAME
+  // points at the SAME times. The panes sync by bar-index (logical range); if
+  // an indicator had fewer points than the candles, index N in the main chart
+  // would fall past the end of the indicator's data, cramming it into the left
+  // and leaving the right empty. Whitespace keeps counts/times aligned and
+  // renders as a blank gap during warmup.
+  const buildLineSeries = (colName: string): { time: number; value?: number }[] => {
     if (!(colName in colIdx)) {
       return [];
     }
-    const result: { time: number; value: number }[] = [];
-    for (let i = 0; i < data.index.length; i++) {
-      const val = data.data[i][colIdx[colName]];
+    const result: { time: number; value?: number }[] = [];
+    for (const { time, src } of slots) {
+      const val = src < 0 ? null : data.data[src][colIdx[colName]];
       if (val === null || val === undefined || Number.isNaN(val)) {
-        continue;
+        result.push({ time });
+      } else {
+        result.push({ time, value: val });
       }
-      result.push({ time: chartTimes[i], value: val });
     }
     return result;
   };
+
+  // A series is worth drawing only if it has at least one real (non-whitespace)
+  // value; a whitespace-only array would add an invisible, range-padding series.
+  const hasReal = (arr: { value?: number }[]) =>
+    arr.some(p => p.value !== undefined);
 
   const sma20 = buildLineSeries('sma20');
   const sma100 = buildLineSeries('sma100');
@@ -278,19 +335,19 @@ function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
   const macdSignal = buildLineSeries('macd_signal');
   const rsi = buildLineSeries('rsi');
 
-  const macdHist = data.index
-    .map((_ts, i) => {
-      const val = data.data[i][colIdx.macd_difference];
-      if (val === null || val === undefined || Number.isNaN(val)) {
-        return null;
-      }
-      return {
-        time: chartTimes[i],
-        value: val,
-        color: val >= 0 ? 'rgba(76,175,80,0.7)' : 'rgba(244,67,54,0.7)',
-      };
-    })
-    .filter(Boolean);
+  // Full-length (whitespace-padded) so the MACD pane shares the candles' time
+  // points — see buildLineSeries. Null bars become whitespace, not dropped.
+  const macdHist = slots.map(({ time, src }) => {
+    const val = src < 0 ? null : data.data[src][colIdx.macd_difference];
+    if (val === null || val === undefined || Number.isNaN(val)) {
+      return { time };
+    }
+    return {
+      time,
+      value: val,
+      color: val >= 0 ? 'rgba(76,175,80,0.7)' : 'rgba(244,67,54,0.7)',
+    };
+  });
 
   return `<!DOCTYPE html>
 <html>
@@ -305,17 +362,37 @@ function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { background: #1a1a2e; overflow: hidden; width: 100vw; height: 100vh; }
-    #main-chart { width: 100vw; height: 55vh; }
+    #main-chart { width: 100%; height: 100%; }
     #macd-chart { width: 100vw; height: 22vh; border-top: 1px solid #333; }
-    #rsi-chart  { width: 100vw; height: 23vh; border-top: 1px solid #333; }
+    #rsi-chart  { width: 100%; height: 100%; }
+    .pane { position: relative; width: 100vw; }
+    .pane-main { height: 55vh; }
+    .pane-rsi { height: 23vh; border-top: 1px solid #333; }
+    /* Overlay strip sitting on the chart's time axis, where the built-in tick
+       labels would be. Pointer-events off so it never eats chart gestures.
+       z-index MUST beat the chart canvases: lightweight-charts renders them at
+       z-index 1, so an auto/0 overlay is painted underneath and is invisible. */
+    .daylabels { position: absolute; left: 0; right: 0; bottom: 2px;
+                 height: 12px; pointer-events: none; z-index: 2; }
+    .daylabels span { position: absolute; transform: translateX(-50%);
+                      color: #ccc; font-size: 10px; line-height: 12px;
+                      white-space: nowrap; }
   </style>
 </head>
 <body>
-  <div id="main-chart"></div>
+  <div class="pane pane-main">
+    <div id="main-chart"></div>
+    <div class="daylabels" id="main-days"></div>
+  </div>
   <div id="macd-chart"></div>
-  <div id="rsi-chart"></div>
+  <div class="pane pane-rsi">
+    <div id="rsi-chart"></div>
+    <div class="daylabels" id="rsi-days"></div>
+  </div>
   <script>
     var rangeLabel = ${JSON.stringify(rangeLabel)};
+    // One chart time per session, at its 09:30 open. Drives the 5D day labels.
+    var SESSION_OPENS = ${JSON.stringify(sessionOpens)};
 
     // Timestamps are "fake UTC" shifted to Eastern time (see TIMEZONE STRATEGY).
     // Using getUTC*() here intentionally reads back Eastern hours/minutes/etc.
@@ -335,10 +412,13 @@ function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
         return h12 + '';
         return '';
       }
-      if (rangeLabel === '1W') {
-        var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-        var wh = h % 12 || 12;
-        return days[d.getUTCDay()] + ' ' + wh + (m ? ':' + (m < 10 ? '0' + m : m) : '');
+      if (rangeLabel === '5D') {
+        // Built-in ticks are blank on 5D: the library only places a tick where
+        // the UTC date rolls over (the day's FIRST bar, i.e. premarket) and
+        // silently drops ticks it has no room for, so it can neither hit 09:30
+        // nor guarantee one label per session. renderDayLabels() draws them
+        // instead, positioned with timeToCoordinate().
+        return '';
       }
       if (rangeLabel === '1M' || rangeLabel === '6M') {
         return months[mon] + ' ' + day;
@@ -360,6 +440,11 @@ function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
         timeVisible: true,
         tickMarkFormatter: formatTick,
         tickMarkMaxCharacterLength: 5,
+        // The default (0.5) is too wide to fit a full 5-session intraday
+        // series on a phone: fitContent() would silently clamp and show only
+        // the most recent ~70% of the range. Allow tighter packing so every
+        // requested session is actually visible.
+        minBarSpacing: 0.02,
       },
     };
 
@@ -391,7 +476,7 @@ function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
     };
 
     ${
-      sma20.length > 0
+      hasReal(sma20)
         ? `
     main.addLineSeries({ color: '#ff9800', lineWidth: 1, lastValueVisible: false, priceLineVisible: false }).setData(${JSON.stringify(
       sma20,
@@ -400,7 +485,7 @@ function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
         : ''
     }
     ${
-      sma100.length > 0
+      hasReal(sma100)
         ? `
     main.addLineSeries({ color: '#2196f3', lineWidth: 1, lastValueVisible: false, priceLineVisible: false }).setData(${JSON.stringify(
       sma100,
@@ -409,7 +494,7 @@ function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
         : ''
     }
     ${
-      sma200.length > 0
+      hasReal(sma200)
         ? `
     main.addLineSeries({ color: '#e91e63', lineWidth: 1, lastValueVisible: false, priceLineVisible: false }).setData(${JSON.stringify(
       sma200,
@@ -418,7 +503,7 @@ function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
         : ''
     }
     ${
-      bbandsUpper.length > 0
+      hasReal(bbandsUpper)
         ? `
     main.addLineSeries({ color: 'rgba(33,150,243,0.4)', lineWidth: 1, lineStyle: 2, lastValueVisible: false, priceLineVisible: false }).setData(${JSON.stringify(
       bbandsUpper,
@@ -434,13 +519,19 @@ function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
 
     var macdChart = LightweightCharts.createChart(
       document.getElementById('macd-chart'),
+      // MERGE the timeScale rather than replacing it. A shallow
+      // Object.assign that supplies a fresh timeScale object silently drops
+      // every other timeScale option -- notably minBarSpacing, which left this
+      // pane clamped at the 0.5 default. Because the panes sync by pushing
+      // logical ranges at each other, that clamp propagated back to the main
+      // chart and stopped the full range from ever fitting.
       Object.assign({}, chartOpts, {
-        timeScale: { borderColor: '#333', timeVisible: true, visible: false },
+        timeScale: Object.assign({}, chartOpts.timeScale, { visible: false }),
       })
     );
 
     ${
-      macd.length > 0
+      hasReal(macd)
         ? `
     macdChart.addLineSeries({ color: '#2196f3', lineWidth: 1, lastValueVisible: false, priceLineVisible: false }).setData(${JSON.stringify(
       macd,
@@ -461,7 +552,7 @@ function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
     );
 
     ${
-      rsi.length > 0
+      hasReal(rsi)
         ? `
     rsiChart.addLineSeries({ color: '#ab47bc', lineWidth: 1, lastValueVisible: false, priceLineVisible: false }).setData(${JSON.stringify(
       rsi,
@@ -471,12 +562,58 @@ function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
     }
     rsiChart.timeScale().fitContent();
 
+    // --- 5D day labels ---
+    //
+    // Drawn as an overlay rather than via tickMarkFormatter because the
+    // library places ticks only where the UTC date rolls over (the day's first
+    // bar, which is premarket) and drops ticks it cannot fit — so it can
+    // neither anchor on 09:30 nor guarantee one label per session.
+    // timeToCoordinate() gives the exact x for each session's opening bar.
+    var DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var dayLabelHosts = [
+      document.getElementById('main-days'),
+      document.getElementById('rsi-days')
+    ];
+
+    function renderDayLabels() {
+      if (rangeLabel !== '5D') { return; }
+      var scale = main.timeScale();
+      var marks = [];
+      for (var i = 0; i < SESSION_OPENS.length; i++) {
+        var t = SESSION_OPENS[i];
+        var x = scale.timeToCoordinate(t);
+        // null when the session is scrolled out of view
+        if (x === null || x === undefined) { continue; }
+        marks.push({ x: x, name: DAY_NAMES[new Date(t * 1000).getUTCDay()] });
+      }
+      // Labels are centred on their bar (translateX(-50%)), so one sitting on
+      // the first bar would hang half off the left edge. Keep them on screen.
+      var pad = 14;
+      var maxX = (dayLabelHosts[0] ? dayLabelHosts[0].clientWidth : 0) - pad;
+      for (var j = 0; j < marks.length; j++) {
+        if (marks[j].x < pad) { marks[j].x = pad; }
+        if (maxX > pad && marks[j].x > maxX) { marks[j].x = maxX; }
+      }
+      for (var h = 0; h < dayLabelHosts.length; h++) {
+        var host = dayLabelHosts[h];
+        if (!host) { continue; }
+        host.innerHTML = '';
+        for (var k = 0; k < marks.length; k++) {
+          var span = document.createElement('span');
+          span.textContent = marks[k].name;
+          span.style.left = marks[k].x + 'px';
+          host.appendChild(span);
+        }
+      }
+    }
+
     // Sync time scales
     main.timeScale().subscribeVisibleLogicalRangeChange(function(range) {
       if (range) {
         macdChart.timeScale().setVisibleLogicalRange(range);
         rsiChart.timeScale().setVisibleLogicalRange(range);
       }
+      renderDayLabels();
     });
     macdChart.timeScale().subscribeVisibleLogicalRangeChange(function(range) {
       if (range) {
@@ -490,6 +627,11 @@ function buildChartHtml(data: HistoryResponse, rangeLabel: string): string {
         macdChart.timeScale().setVisibleLogicalRange(range);
       }
     });
+
+    // Defer the first paint until layout has settled, otherwise
+    // timeToCoordinate() reports positions for a not-yet-sized canvas.
+    requestAnimationFrame(renderDayLabels);
+    window.addEventListener('resize', renderDayLabels);
   </script>
 </body>
 </html>`;
@@ -627,13 +769,22 @@ export default function ChartScreen({ route, navigation }: Props) {
       .then(rawData => {
         const tFetch = Date.now();
         // Slice to the visual window so we only show the intended time range
-        const data = sliceToWindow(rawData, activeRange.windowMs);
+        const data = sliceToWindow(
+          rawData,
+          activeRange.windowMs,
+          activeRange.sessions,
+        );
         const tSlice = Date.now();
         if (data.data.length === 0) {
           setError('No data available for this range');
           return;
         }
-        const html = buildChartHtml(data, activeRange.label);
+        // Pad sessions to equal width only on session-sliced ranges (5D);
+        // elsewhere bars map 1:1 onto slots.
+        const gridIntervalSec = activeRange.sessions
+          ? (FREQ_MINUTES[freq] ?? 0) * 60
+          : 0;
+        const html = buildChartHtml(data, activeRange.label, gridIntervalSec);
         const tBuild = Date.now();
         console.warn(
           `[ChartScreen] fetch=${tFetch - t0}ms (${
