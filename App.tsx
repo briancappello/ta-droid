@@ -60,7 +60,11 @@ const ChartNav = createNativeStackNavigator<RootStackParamList>();
 function ChartStack() {
   return (
     <ChartNav.Navigator screenOptions={{ headerShown: false }}>
-      <ChartNav.Screen name="Chart" component={ChartScreen} />
+      <ChartNav.Screen
+        name="Chart"
+        component={ChartScreen}
+        initialParams={{ ticker: 'AMD' }}
+      />
       <ChartNav.Screen name="OrderEntry" component={OrderEntryScreen} />
       <ChartNav.Screen name="Exit" component={ExitScreen} />
     </ChartNav.Navigator>
@@ -133,6 +137,11 @@ function App() {
                   drawerInactiveTintColor: '#ccc',
                 }}
               >
+                <Drawer.Screen
+                  name="ChartStack"
+                  component={ChartStack}
+                  options={{ title: 'Chart' }}
+                />
                 <Drawer.Screen name="Positions" component={PositionsScreen} />
                 <Drawer.Screen name="Orders" component={OrdersScreen} />
                 <Drawer.Screen name="Watchlists" component={WatchlistsScreen} />
@@ -140,11 +149,6 @@ function App() {
                   name="SettingsStack"
                   component={SettingsStack}
                   options={{ title: 'Settings' }}
-                />
-                <Drawer.Screen
-                  name="ChartStack"
-                  component={ChartStack}
-                  options={{ drawerItemStyle: { display: 'none' } }}
                 />
               </Drawer.Navigator>
             </NavigationContainer>
