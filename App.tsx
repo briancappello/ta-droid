@@ -125,6 +125,7 @@ function App() {
             <NavigationContainer>
               <Drawer.Navigator
                 initialRouteName="Watchlists"
+                backBehavior="history"
                 screenOptions={{
                   headerShown: false,
                   drawerStyle: { backgroundColor: '#16213e' },

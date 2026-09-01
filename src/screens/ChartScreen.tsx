@@ -10,12 +10,14 @@ import {
   Modal,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { DrawerActions } from '@react-navigation/native';
 import type { RootStackParamList } from '../../App';
 import { fetchHistory, type HistoryResponse } from '../api';
 import { LIGHTWEIGHT_CHARTS_JS } from '../vendor/lightweightCharts';
@@ -30,6 +32,7 @@ import {
   sessionOpenTimes,
   sessionStartIndex,
 } from '../chartTime';
+import { formatMoney } from '../format';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Chart'>;
 
@@ -742,6 +745,18 @@ export default function ChartScreen({ route, navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [holdings, setHoldings] = useState<SymbolHolding[]>([]);
+  const [lastPrice, setLastPrice] = useState<number | null>(null);
+  const [symInput, setSymInput] = useState('');
+
+  // Switch the chart to a typed symbol. ticker drives the data-load, holdings,
+  // and stream effects, so setParams reloads everything in place.
+  const submitSymbol = useCallback(() => {
+    const next = symInput.trim().toUpperCase();
+    setSymInput('');
+    if (next && next !== ticker) {
+      navigation.setParams({ ticker: next });
+    }
+  }, [symInput, ticker, navigation]);
 
   // ponytail: holdingsForSymbol re-fetches every account's full position list on
   // each ticker change, with no shared cache between PositionsScreen and this
@@ -779,6 +794,11 @@ export default function ChartScreen({ route, navigation }: Props) {
           setError('No data available for this range');
           return;
         }
+        // Seed the header price from the last loaded close; the stream effect
+        // keeps it in sync with the chart's right-axis last-value label.
+        const closeIdx = data.columns.indexOf('close');
+        const lastRow = data.data[data.data.length - 1];
+        setLastPrice(closeIdx >= 0 && lastRow ? lastRow[closeIdx] : null);
         // Pad sessions to equal width only on session-sliced ranges (5D);
         // elsewhere bars map 1:1 onto slots.
         const gridIntervalSec = activeRange.sessions
@@ -806,6 +826,7 @@ export default function ChartScreen({ route, navigation }: Props) {
         return;
       }
       const bar = barFromBarPayload(msg.data.payload);
+      setLastPrice(bar.close);
       webRef.current?.injectJavaScript(
         `window.__pushBar && window.__pushBar(${JSON.stringify(bar)}); true;`,
       );
@@ -815,7 +836,48 @@ export default function ChartScreen({ route, navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.toolbar, { paddingTop: insets.top + 6 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+            style={styles.headerNavBtn}
+            accessibilityLabel="Open navigation menu"
+          >
+            <Text style={styles.headerNavIcon}>☰</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerSymbol}>{ticker}</Text>
+          {lastPrice != null && (
+            <Text style={styles.headerPrice}>{formatMoney(lastPrice)}</Text>
+          )}
+        </View>
+        <View style={styles.headerRight}>
+          <TextInput
+            style={styles.symInput}
+            value={symInput}
+            onChangeText={setSymInput}
+            onSubmitEditing={submitSymbol}
+            placeholder="Sym"
+            placeholderTextColor="#8a97b0"
+            autoCapitalize="characters"
+            autoCorrect={false}
+            returnKeyType="search"
+            accessibilityLabel="Switch symbol"
+          />
+          <TouchableOpacity
+            style={styles.tradeButton}
+            accessibilityLabel="Trade"
+            onPress={() =>
+              navigation.navigate('OrderEntry', {
+                symbol: ticker,
+                accountId: activeId ?? undefined,
+              })
+            }
+          >
+            <Text style={styles.tradeButtonText}>Trade</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      <View style={styles.toolbar}>
         <RangePills
           ranges={RANGES}
           activeIndex={rangeIndex}
@@ -834,17 +896,6 @@ export default function ChartScreen({ route, navigation }: Props) {
             <Text style={styles.exitButtonText}>Exit</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity
-          style={styles.tradeButton}
-          onPress={() =>
-            navigation.navigate('OrderEntry', {
-              symbol: ticker,
-              accountId: activeId ?? undefined,
-            })
-          }
-        >
-          <Text style={styles.tradeButtonText}>Trade</Text>
-        </TouchableOpacity>
       </View>
       {holdings.length > 0 && (
         <View style={styles.posStrip}>
@@ -899,6 +950,37 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1a1a2e',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    paddingBottom: 6,
+    backgroundColor: '#16213e',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flexShrink: 1,
+  },
+  headerNavBtn: { paddingVertical: 4, paddingHorizontal: 4 },
+  headerNavIcon: { color: '#fff', fontSize: 20 },
+  headerSymbol: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  headerPrice: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  symInput: {
+    color: '#fff',
+    backgroundColor: '#1a1a2e',
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    fontSize: 13,
+    minWidth: 72,
+    textAlign: 'center',
   },
   toolbar: {
     flexDirection: 'row',

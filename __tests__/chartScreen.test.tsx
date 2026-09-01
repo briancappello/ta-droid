@@ -69,3 +69,44 @@ test('subscribes to the ticker OHLCV stream', async () => {
   const keys = (stream.subscribe as jest.Mock).mock.calls.map(c => c[0][0]);
   expect(keys.some((k: string) => k.startsWith('AAPL/') && k.endsWith('/OHLCV'))).toBe(true);
 });
+
+test('header shows the ticker; Trade opens OrderEntry and nav opens the drawer', async () => {
+  (flatten.holdingsForSymbol as jest.Mock).mockResolvedValue([]);
+  const route = { params: { ticker: 'SMCI' } } as any;
+  const nav = { navigate: jest.fn(), dispatch: jest.fn() } as any;
+  let tree!: ReactTestRenderer.ReactTestRenderer;
+  await act(async () => {
+    tree = ReactTestRenderer.create(<ChartScreen route={route} navigation={nav} />);
+  });
+  await act(async () => {});
+  expect(JSON.stringify(tree.toJSON())).toContain('SMCI');
+
+  const trade = tree.root.findAll(n => n.props.accessibilityLabel === 'Trade')[0];
+  act(() => trade.props.onPress());
+  expect(nav.navigate).toHaveBeenCalledWith(
+    'OrderEntry',
+    expect.objectContaining({ symbol: 'SMCI' }),
+  );
+
+  const menu = tree.root.findAll(
+    n => n.props.accessibilityLabel === 'Open navigation menu',
+  )[0];
+  act(() => menu.props.onPress());
+  expect(nav.dispatch).toHaveBeenCalled();
+});
+
+test('typing a symbol and submitting switches the chart via setParams', async () => {
+  (flatten.holdingsForSymbol as jest.Mock).mockResolvedValue([]);
+  const route = { params: { ticker: 'AAPL' } } as any;
+  const nav = { navigate: jest.fn(), setParams: jest.fn() } as any;
+  let tree!: ReactTestRenderer.ReactTestRenderer;
+  await act(async () => {
+    tree = ReactTestRenderer.create(<ChartScreen route={route} navigation={nav} />);
+  });
+  await act(async () => {});
+  const find = () =>
+    tree.root.findAll(n => n.props.accessibilityLabel === 'Switch symbol')[0];
+  act(() => find().props.onChangeText('tsla'));
+  act(() => find().props.onSubmitEditing());
+  expect(nav.setParams).toHaveBeenCalledWith({ ticker: 'TSLA' });
+});
