@@ -19,7 +19,7 @@ test('importing alpaca.ts wires the real driver into the registry', () => {
 });
 
 function mockFetch(status: number, body: unknown) {
-  return jest.spyOn(global, 'fetch').mockResolvedValue({
+  return jest.spyOn(globalThis, 'fetch').mockResolvedValue({
     ok: status >= 200 && status < 300,
     status,
     text: async () => (body == null ? '' : JSON.stringify(body)),
@@ -33,7 +33,10 @@ test('listPositions GETs /v2/positions on the paper host', async () => {
   expect(url).toBe('https://paper-api.alpaca.markets/v2/positions');
   expect(init?.method).toBe('GET');
   expect((init?.headers as Record<string, string>)['APCA-API-KEY-ID']).toBe('K');
-  expect(init?.redirect).toBe('error');
+  // RN's RequestInit type omits `redirect`, so widen it the same way
+  // src/alpaca.ts does. This guards a real property: a 3xx must never be
+  // followed off-host while the request carries the API secret headers.
+  expect((init as RequestInit & { redirect?: string })?.redirect).toBe('error');
 });
 
 test('live account uses the live host', async () => {
@@ -83,7 +86,7 @@ test('non-ok response throws AlpacaError with status', async () => {
 
 test('request timeout throws AlpacaError with status 0', async () => {
   jest
-    .spyOn(global, 'fetch')
+    .spyOn(globalThis, 'fetch')
     .mockRejectedValue(Object.assign(new Error('aborted'), { name: 'AbortError' }));
   await expect(alpacaDriver.listPositions(acct)).rejects.toMatchObject({
     status: 0,

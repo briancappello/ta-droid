@@ -7,7 +7,7 @@ import {
 afterEach(() => jest.restoreAllMocks());
 
 test('fetchWatchlists maps MarketStore names to {id,name} with friendly labels', async () => {
-  jest.spyOn(global, 'fetch').mockResolvedValue({
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue({
     ok: true,
     json: async () => ({
       watchlists: [

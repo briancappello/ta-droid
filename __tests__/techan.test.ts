@@ -4,7 +4,7 @@ import { pingHealth, fetchStrategyPositions } from '../src/techan';
 afterEach(() => jest.restoreAllMocks());
 
 function mockFetch(status: number, body: unknown) {
-  return jest.spyOn(global, 'fetch').mockResolvedValue({
+  return jest.spyOn(globalThis, 'fetch').mockResolvedValue({
     ok: status >= 200 && status < 300,
     status,
     json: async () => body,
@@ -16,7 +16,7 @@ test('pingHealth true on 200, false on error', async () => {
   mockFetch(200, {});
   expect(await pingHealth()).toBe(true);
   jest.restoreAllMocks();
-  jest.spyOn(global, 'fetch').mockRejectedValue(new Error('down'));
+  jest.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('down'));
   expect(await pingHealth()).toBe(false);
 });
 
@@ -26,6 +26,6 @@ test('fetchStrategyPositions returns rows, [] on failure', async () => {
     { account_id: 'a', symbol: 'AAPL', strategy: 'Momentum' },
   ]);
   jest.restoreAllMocks();
-  jest.spyOn(global, 'fetch').mockRejectedValue(new Error('x'));
+  jest.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('x'));
   expect(await fetchStrategyPositions()).toEqual([]);
 });

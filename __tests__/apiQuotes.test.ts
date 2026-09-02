@@ -3,14 +3,14 @@ import { fetchQuotes } from '../src/api';
 afterEach(() => jest.restoreAllMocks());
 
 test('returns [] without calling the network for an empty ticker list', async () => {
-  const spy = jest.spyOn(global, 'fetch');
+  const spy = jest.spyOn(globalThis, 'fetch');
   const res = await fetchQuotes([]);
   expect(res).toEqual([]);
   expect(spy).not.toHaveBeenCalled();
 });
 
 test('maps MarketStore quotes to ApiQuote shape', async () => {
-  jest.spyOn(global, 'fetch').mockResolvedValue({
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue({
     ok: true,
     json: async () => ({
       quotes: [
@@ -44,7 +44,7 @@ test('maps MarketStore quotes to ApiQuote shape', async () => {
 });
 
 test('passes prev_close null through unchanged', async () => {
-  jest.spyOn(global, 'fetch').mockResolvedValue({
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue({
     ok: true,
     json: async () => ({
       quotes: [

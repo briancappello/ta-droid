@@ -10,7 +10,7 @@ function barsResponse(bars: unknown[]) {
 }
 
 test('maps app frequency to the MarketStore timeframe and over-fetches warmup', async () => {
-  const spy = jest.spyOn(global, 'fetch').mockResolvedValue(barsResponse([]));
+  const spy = jest.spyOn(globalThis, 'fetch').mockResolvedValue(barsResponse([]));
   await fetchHistory('AAPL', '5min', 100);
   const url = spy.mock.calls[0][0] as string;
   expect(url).toContain('/v1/bars/AAPL');
@@ -19,7 +19,7 @@ test('maps app frequency to the MarketStore timeframe and over-fetches warmup', 
 });
 
 test('returns empty columnar response when there are no bars', async () => {
-  jest.spyOn(global, 'fetch').mockResolvedValue(barsResponse([]));
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue(barsResponse([]));
   const res = await fetchHistory('AAPL', 'D', 100);
   expect(res).toEqual({ columns: [], index: [], data: [] });
 });
@@ -43,7 +43,7 @@ test('builds columnar HistoryResponse with ms index and indicator columns', asyn
       volume: 1200,
     },
   ];
-  jest.spyOn(global, 'fetch').mockResolvedValue(barsResponse(bars));
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue(barsResponse(bars));
   const res = await fetchHistory('AAPL', 'D', 2);
 
   expect(res.columns).toEqual([
@@ -83,7 +83,7 @@ test('slices off the warmup prefix so returned length is at most limit', async (
     close: i + 0.5,
     volume: 10,
   }));
-  jest.spyOn(global, 'fetch').mockResolvedValue(barsResponse(bars));
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue(barsResponse(bars));
   const res = await fetchHistory('AAPL', 'D', 50);
   expect(res.index).toHaveLength(50);
   // sma200 is warm on the tail because indicators ran over the full 250 bars.

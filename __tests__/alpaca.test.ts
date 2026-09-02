@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 function mockFetch(status: number, body: unknown) {
-  return jest.spyOn(global, 'fetch').mockResolvedValue({
+  return jest.spyOn(globalThis, 'fetch').mockResolvedValue({
     ok: status >= 200 && status < 300,
     status,
     json: async () => body,
@@ -40,8 +40,8 @@ test('replaceOrder PATCHes to the order id', async () => {
   await replaceOrder(paperAccount, 'o1', { qty: '5' });
   const [url, init] = spy.mock.calls[0];
   expect(url).toBe('https://paper-api.alpaca.markets/v2/orders/o1');
-  expect(init.method).toBe('PATCH');
-  expect(JSON.parse(init.body as string)).toEqual({ qty: '5' });
+  expect(init?.method).toBe('PATCH');
+  expect(JSON.parse(init?.body as string)).toEqual({ qty: '5' });
 });
 
 test('cancelOrder DELETEs the order id', async () => {
@@ -54,7 +54,7 @@ test('cancelOrder DELETEs the order id', async () => {
 });
 
 test('cancelOrder tolerates a truly empty 204 body (no JSON parse crash)', async () => {
-  jest.spyOn(global, 'fetch').mockResolvedValue({
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue({
     ok: true,
     status: 204,
     json: async () => {

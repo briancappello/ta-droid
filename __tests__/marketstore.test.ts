@@ -22,7 +22,7 @@ test('freqToTimeframe throws on unknown frequency', () => {
 });
 
 test('getBars requests the bars endpoint with timeframe and limit', async () => {
-  const spy = jest.spyOn(global, 'fetch').mockResolvedValue({
+  const spy = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
     ok: true,
     json: async () => ({ symbol: 'AAPL', timeframe: '1D', bars: [] }),
   } as unknown as Response);
@@ -34,7 +34,7 @@ test('getBars requests the bars endpoint with timeframe and limit', async () => 
 });
 
 test('getQuotes joins symbols and defaults timeframe to 1D', async () => {
-  const spy = jest.spyOn(global, 'fetch').mockResolvedValue({
+  const spy = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
     ok: true,
     json: async () => ({ quotes: [] }),
   } as unknown as Response);
@@ -46,7 +46,7 @@ test('getQuotes joins symbols and defaults timeframe to 1D', async () => {
 });
 
 test('getWatchlists requests the watchlists collection', async () => {
-  const spy = jest.spyOn(global, 'fetch').mockResolvedValue({
+  const spy = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
     ok: true,
     json: async () => ({ watchlists: [] }),
   } as unknown as Response);
@@ -55,7 +55,7 @@ test('getWatchlists requests the watchlists collection', async () => {
 });
 
 test('getWatchlist requests a single watchlist by name', async () => {
-  const spy = jest.spyOn(global, 'fetch').mockResolvedValue({
+  const spy = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
     ok: true,
     json: async () => ({ name: 'MOMENTUM', entries: [] }),
   } as unknown as Response);
@@ -66,7 +66,7 @@ test('getWatchlist requests a single watchlist by name', async () => {
 });
 
 test('non-2xx surfaces the server error message', async () => {
-  jest.spyOn(global, 'fetch').mockResolvedValue({
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue({
     ok: false,
     status: 404,
     json: async () => ({ error: 'symbol not found' }),
@@ -75,17 +75,17 @@ test('non-2xx surfaces the server error message', async () => {
 });
 
 test('network failure surfaces a friendly message', async () => {
-  jest.spyOn(global, 'fetch').mockRejectedValue(new Error('down'));
+  jest.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('down'));
   await expect(getQuotes(['AAPL'])).rejects.toThrow(/Can't reach market data/);
 });
 
 test('pingMarketstore probes /v1/health, true on ok / false on failure', async () => {
   const spy = jest
-    .spyOn(global, 'fetch')
+    .spyOn(globalThis, 'fetch')
     .mockResolvedValue({ ok: true } as Response);
   expect(await pingMarketstore()).toBe(true);
   expect(spy.mock.calls[0][0]).toBe('https://ms.test/v1/health');
   jest.restoreAllMocks();
-  jest.spyOn(global, 'fetch').mockRejectedValue(new Error('down'));
+  jest.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('down'));
   expect(await pingMarketstore()).toBe(false);
 });
