@@ -811,7 +811,9 @@ export default function ChartScreen({ route, navigation }: Props) {
           : 0;
         const html = buildChartHtml(data, activeRange.label, gridIntervalSec);
         const tBuild = Date.now();
-        console.warn(
+        // log, not warn: this is routine timing instrumentation and warn pops
+        // React Native's yellow-box warning toast on every single chart load.
+        console.log(
           `[ChartScreen] fetch=${tFetch - t0}ms (${
             rawData.data.length
           } rows) ` +
