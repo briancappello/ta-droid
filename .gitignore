@@ -60,6 +60,13 @@ yarn-error.log
 # testing
 /coverage
 
+# Lockfiles from other package managers. This repo is pnpm — pnpm-lock.yaml
+# is the only lockfile that should ever be committed. A stray npm lockfile
+# resolves a different tree and silently diverges from what anyone installs.
+package-lock.json
+yarn.lock
+bun.lockb
+
 # Yarn
 .yarn/*
 !.yarn/patches
