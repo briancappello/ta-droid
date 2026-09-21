@@ -8,7 +8,10 @@
     "lint": "eslint .",
     "start": "bash scripts/dev.sh",
     "metro": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "clean": "rm -rf android/app/build android/build android/.gradle \"${TMPDIR:-/tmp}\"/metro-cache \"${TMPDIR:-/tmp}\"/metro-* \"${TMPDIR:-/tmp}\"/haste-map-*",
+    "clean:deps": "rm -rf node_modules",
+    "clean:all": "pnpm run clean && pnpm run clean:deps"
   },
   "dependencies": {
     "@react-native/new-app-screen": "0.84.1",
