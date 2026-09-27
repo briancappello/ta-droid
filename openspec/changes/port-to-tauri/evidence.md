@@ -64,3 +64,14 @@
   - Starts Appium. Pidfiles plus `adb emu kill` clean up on exit.
 - `UI_PREBUILT=1` (set by the mise tasks) skips Tauri's `beforeBuildCommand`, so parallel gates never write `ui/dist` at the same time.
 - Results: `mise run e2e:android` exits 0 with 1 passing, and `artifacts/g4/smoke-launch.png` shows the app root in the Android WebView. Afterwards `adb devices` is empty and no pidfiles remain. `mise run verify` (G1–G4 in parallel) exits 0.
+
+### 2.4 G5 postmarketOS VM
+- `e2e/pmos/vm.sh` supports `start`, `stop`, `ssh`, `shot`, and `status`. State lives in `~/.local/share/ta-droid/pmos/`. The VM runs under `setsid` so it outlives the tool shell, with its PID in `qemu.pid`. `stop` powers off cleanly (`sudo poweroff`) and kills only as a fallback.
+- Gotcha: killing qemu without a clean poweroff lost the `authorized_keys` written in 0.1, because it had not been flushed. The key was reinstalled with the throwaway password and `sync`. `stop` now always powers off cleanly.
+- One manual step, over the throwaway password: `/etc/sudoers.d/90-ta-droid-vm` gives the test user passwordless sudo inside the disposable VM. On the workstation, the agent still has no root.
+- `e2e/pmos/provision-vm.sh` is idempotent and does the rest:
+  - greetd `initial_session` logs the test user into Phosh (config `/etc/greetd/ta-droid.toml`, ExecStart drop-in over pmOS's phrog greeter).
+  - `WLR_RENDERER=pixman`. With EGL, phoc died at early boot ("virtio_gpu: driver missing", then `/dev/dri/card0: Permission denied`, then "Could not create renderer"), and the session fell back to the greeter.
+  - A `mobi.phosh.Shell` drop-in adds `--unlocked` (gsettings `lock-enabled=false` was not enough), and the screen lock and idle are disabled.
+  - It installs `grim` and `jq`, then reboots, because greetd runs `initial_session` once per boot.
+- Result: two cold boots in a row each had one `brian` session on `seat0` and `uname -m` → `aarch64`. Batch-mode ssh uses the VM-only key. `artifacts/g5/phosh-home.png` (720×1440) shows the unlocked Phosh app grid.
