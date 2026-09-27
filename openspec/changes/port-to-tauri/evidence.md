@@ -559,3 +559,47 @@
     - `alpacaDriver` "importing alpaca.ts wires the real driver" and `broker` "driverFor resolves the driver": RN module-wiring checks with no Rust equivalent. Rust dispatch is static, and an unknown broker is a parse error, which is tested.
     - `orderEntryScreen` "modify mode": the RN screen was unreachable, and order modify is out of scope in the trading spec.
 - Section 5 is complete. The app runs on the Linux desktop with every screen on the Rust backend.
+
+### 6.5 pmOS VM on qemu-amd64 with KVM
+- The operator built postmarketOS v26.06 (Alpine 3.24) for `qemu-amd64` with Phosh. The test user is now `pmos` (was `brian`), and pmbootstrap `ssh_keys = True` put the operator key in `authorized_keys`.
+- The image is copied to `~/.local/share/ta-droid/pmos/qemu-amd64.img` and grown to 10 GiB (`truncate`, then `sfdisk -N 2`). pmOS grew the root filesystem on first boot (9.2 GiB), so `resize2fs` is not needed.
+- `e2e/pmos/vm.sh`:
+  - `qemu-system-x86_64 -machine q35,accel=kvm -cpu host`, UEFI from the host's unpadded `OVMF_CODE.4m.fd`, with a private copy of `OVMF_VARS.4m.fd`.
+  - The test user is `pmos` (`PMOS_USER` overrides it).
+  - New subcommands: `scp`, `app-start CMD` (a transient user unit in the Phosh session, because a process started from ssh dies with the ssh session), and `app-stop`. These came from the parked arm64 stash.
+- One manual step, done with the operator key: the VM-only key was added to `authorized_keys`, and `/etc/sudoers.d/90-ta-droid-vm` was written with the throwaway password.
+- `e2e/pmos/provision-vm.sh` changes:
+  - The autologin user is `pmos`.
+  - It hides the first-login Phosh Tour, which covered the screen (`~/.config/autostart/mobi.phosh.PhoshTour-first-login.desktop` with `Hidden=true`).
+  - Packages: `wtype` (typing into the app) and the WebKitGTK runtime.
+  - `AllowTcpForwarding remote` in `/etc/ssh/sshd_config.d/`, because pmOS turns forwarding off. The drop-in is included before the main file, so it wins.
+  - An unencrypted, empty-password `login` keyring (see 6.6).
+- Result: ssh is up about 20 s after launch (under TCG on arm64 it took about 40 s). `uname -m` prints `x86_64`. `artifacts/g5/phosh-unlocked.png` shows the unlocked Phosh app grid.
+
+### 6.6 x86_64 musl build and G5
+- `packaging/builders/alpine.Containerfile` is the parked arm64 builder, generalized. It uses Alpine 3.24 (matching the VM), Rust 1.96.0 from rustup, and `-C target-feature=-crt-static`, because GTK and WebKit are shared libraries. It runs natively on x86_64, and with `--platform linux/arm64` for the phone.
+- `packaging/build-alpine.sh [x86_64|aarch64]` runs in rootless podman with `--userns=keep-id`. The cargo registry and target directories are named volumes. It builds the binary, then the apk (7.2).
+  - `TA_DROID_CONFIG` (a path in the repo) selects the embedded config, the same way `build.rs` does on the host.
+  - `ALPINE_OUT` sets the output directory.
+  - `ALPINE_FAST=1` turns off fat LTO and uses 16 codegen units, with a target volume of its own. Every `build:ui` changes `ui/dist`, which makes `tauri_build` relink the app, and fat LTO spent about 3 minutes on that relink.
+- G5 builds with the e2e config but **without** the `e2e` feature, so the secrets go to the real Secret Service (gnome-keyring), not to the e2e file store. The VM reaches fake-backends on the host through `ssh -R 127.0.0.1:8787`, so the e2e config works unchanged.
+- `e2e/run-pmos.sh` (`mise run e2e:pmos`) does these steps:
+  1. Starts fake-backends and the tunnel (pidfiles), and starts the VM only if it is stopped.
+  2. Resets the VM state: removes the package, the app data directory, and every item in the `login` collection.
+  3. Installs `artifacts/g5/pkg/ta-droid-*.apk`, then checks that `/usr/bin/ta-droid` and the desktop entry exist.
+  4. Checks that the Secret Service has no items and fake-backends has had no shell requests. It starts the app as a user unit and takes a screenshot of the gate.
+  5. Types the fixture passphrase with `wtype`. It waits for Secret Service items and for `/marketstore/v1/watchlists`, which only the shell requests, because the gate hides the shell. It checks that `gcr-prompter` is not running.
+  6. Restarts the app. It waits for a new watchlists request and checks for no prompt and the same item count.
+- The keyring under autologin: greetd autologin gives PAM no password, so the `login` keyring stayed locked. The first save showed "The login keyring did not get unlocked when you logged into your computer." A phone unlocks this keyring with the login PIN. The test VM stands in for that with an unencrypted `login` keyring that has an empty password. After each boot it reports `Locked=true`, but `Unlock` succeeds with no prompt (prompt path `/`), and the secret-service client calls `Unlock` itself. The G5 reset also calls `Unlock` before it deletes items, because deleting from a locked collection fails with "Cannot delete a locked item". This keyring keeps secrets in plain text on the VM disk. It is for the test VM only.
+- Gate bug found and fixed: `wait_for ... test "$(secret_count)" -gt 0` expanded the count once, so the gate polled a fixed value and timed out after a successful save. `wait_for` now evaluates an expression on each poll.
+- The Phosh compositor (phoc) maximizes the window with no app change. EGL prints warnings in the VM ("virtio_gpu: driver missing"), and WebKit falls back to software rendering.
+- Results: `mise run e2e:pmos` exits 0: "installed the apk, provisioned through the UI (5 secrets), restarted from the Secret Service". Timing from a stopped VM with a warm cache is **1 min 45 s** (the build is 1 min 8 s). The first run with fat LTO took 4 min 28 s. The VM stops cleanly on exit. Screenshots: `artifacts/g5/01-gate.png`, `02-provisioned.png`, `03-restarted.png` (Watchlists, with the MS and FA health checks green).
+- `verify:mobile` now depends on `e2e:android` and `e2e:pmos`.
+
+### 7.2 postmarketOS package (x86_64 done, aarch64 blocked)
+- `packaging/alpine/APKBUILD` installs the binary from `build-alpine.sh`, the desktop entry, and the 128 px icon. It depends on `webkit2gtk-4.1`, `gtk+3.0`, and `gnome-keyring`, and abuild adds the `so:` dependencies. The APKBUILD does not compile anything, so the pinned toolchain and the incremental cargo cache are used. The tradeoff is that this APKBUILD can be sideloaded but cannot go to aports as it is.
+- `abuild checksum` runs at build time. The package is signed with a throwaway key made for each build, and G5 installs it with `apk add --allow-untrusted`. The repository index step is skipped, because it rejects the untrusted key and is not needed.
+- `packaging/alpine/com.briancappello.ta-droid.desktop` has `X-Purism-FormFactor=Workstation;Mobile;` so that Phosh lists the app. phoc maximizes the window, so no app setting is needed for phone shells.
+- `mise run package:pmos` builds x86_64. `mise run package:pmos aarch64` builds for the OnePlus 7 Pro, with the real config if it exists, else the example config.
+- x86_64: G5 (6.6) installs this package, provisions through the UI with the `e2e` profile, restarts, and loads from the Secret Service with no prompt.
+- **aarch64 is blocked.** The host has no `qemu-aarch64` binfmt handler registered (`/proc/sys/fs/binfmt_misc` has `qemu-aarch64_be` but no `qemu-aarch64`), so the arm64 container fails with "Exec format error". The handler was there for the parked arm64 builds, and pmbootstrap probably removed it on shutdown. Registering it needs root, so the operator must do it.
