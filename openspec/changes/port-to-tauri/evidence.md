@@ -260,3 +260,25 @@
   - **500, malformed JSON, wrong shape, connection refused, and timeout (50 ms) each give `[]`**;
   - the tagger by broker, account, and symbol, including a case mismatch and an empty tagger.
 - The ported `pingHealth` case is covered by 3.6.
+
+### 3.14 fake-backends complete
+- **MarketStore**:
+  - bars for every timeframe (1Min–1H in weekday 09:30–16:00 ET EDT sessions; 1D, 1W, 1M) from a deterministic price function anchored at Fri 2026-09-25 16:00 ET;
+  - quotes (`NEWIPO` has a null `prev_close`);
+  - watchlists MOMENTUM, PCT_CHANGE_UP, SECTOR_AGGREGATE (with `fields`);
+  - `NOPE` gives 404 "symbol not found", and `EMPTY` gives no bars;
+  - a `/marketstore/ws` endpoint with the `json` subprotocol that acks subscribe and forwards `POST /__control/push {key, data}` to subscribed sockets.
+- **fa-techan**: `/strategies/positions`, seeded with PA1TEST/AAPL = Momentum and replaceable through `POST /__control/strategies`.
+- **Alpaca**:
+  - Accounts PA1TEST and LV1TEST, whose keys match the provisioning fixture; the key and secret are checked, and a mismatch gives 401.
+  - Per-account positions (including a short) and a seeded open order.
+  - Order create, patch, and delete, and position delete. A duplicate `client_order_id` gives 422 "client_order_id must be unique", like Alpaca.
+- **Control**: `requests` (now with bodies), `reset`, `orders`, and `fail {target, mode: down|401|429|422|slow, key?, method?, times?, slow_ms?}`.
+- `cargo test -p fake-backends`: 10 passed (1 unit test, 3 from 2.1, and 6 new ones that drive the server through the real ta-core clients):
+  - history is warm across 1500 daily rows for all 10 frequencies, and intraday times fall inside the session;
+  - REST errors, quotes, and watchlists;
+  - the stream delivers pushed bar and watchlist updates;
+  - strategy tags, and replacing them;
+  - Alpaca state, recorded orders, duplicate-id rejection, and 401 on a wrong secret;
+  - **every failure mode** (down, 401, 429, 422, slow timeout), `times` consumption, key- and method-scoped rules, and reset.
+- `mise run verify`: exit 0. Section 3 is complete.

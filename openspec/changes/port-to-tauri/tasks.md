@@ -36,7 +36,7 @@ Port each React Native test to Rust with the same cases. The source test files a
 - [x] 3.11 Order validation and request building. Verify: the 9 ported cases pass [`orderValidation`].
 - [x] 3.12 Flatten: finding the legs, parallel submit, per-leg results, and retrying only the legs that failed. Verify: the ported cases pass, plus a new test that a retry after a partial failure sends only the failed legs [`flatten`].
 - [x] 3.13 fa-techan client and strategy tagging: safe empty results and the case-sensitive join. Verify: the ported cases pass, plus a test that a 500, a timeout, and a malformed body each give `[]` [`techan`, `strategyTagger`].
-- [ ] 3.14 Complete `fake-backends`: MarketStore fixtures (bars, quotes, watchlists, WS bars and watchlist updates), fa-techan strategies, an Alpaca paper API, and scripted failures (down, 401, 429, 422, slow). Verify: `cargo test -p fake-backends` covers each failure mode.
+- [x] 3.14 Complete `fake-backends`: MarketStore fixtures (bars, quotes, watchlists, WS bars and watchlist updates), fa-techan strategies, an Alpaca paper API, and scripted failures (down, 401, 429, 422, slow). Verify: `cargo test -p fake-backends` covers each failure mode.
 
 ## 4. Tauri command layer
 

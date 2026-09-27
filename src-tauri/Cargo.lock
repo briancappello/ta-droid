@@ -1286,11 +1286,13 @@ name = "fake-backends"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "futures",
  "reqwest",
  "serde",
  "serde_json",
  "ta-core",
  "tokio",
+ "tokio-tungstenite",
 ]
 
 [[package]]
