@@ -530,3 +530,18 @@
   - Removing only the ref guard still passed, because the disabled button already blocks the second click once React re-renders. That is acceptable: one guard alone is enough.
   - Removing both the guard and `disabled` failed the exactly-once test (the second click submitted again). Both were restored.
 - Screenshots: `order-review.png`, `order-submitted.png`.
+
+### 5.9 Exit
+- `ExitScreen`:
+  - Legs come from `flatten_legs` under "Go flat — N accounts". Each account row expands to edit type (Market/Limit/Stop; switching drops the unused price), qty, and price.
+  - "Exit all" shows "Exiting…" and is guarded against a double tap.
+  - All legs succeed: the notice "Flat — Exited N account(s).", then back.
+  - Otherwise: "Some exits failed" lists each failure, **the list keeps only `remaining` (the failed legs)**, and the next "Exit all" sends only those. N counts every exited leg across attempts.
+  - "No open position." with Cancel.
+  - Footer layout fix: the footer is sticky at the bottom (the first screenshot had it floating under the list).
+- The `placeholders.tsx` screens are gone; every route has its real screen.
+- Vitest (5 new; 95 total): the ported `exitScreen` case (legs under the title); no holdings with Cancel; leg editing sends `type limit, qty 40, limit 190.5, stop null` with the original `client_order_id`; all-ok notice and back; **a partial failure followed by a retry sends `[[a, b], [b]]`**.
+- G3 `e2e/specs/exit.e2e.ts`: 2 passing:
+  - AAPL legs Sell 10 (Paper) and Sell 3 (Live);
+  - **a scripted 422 on Live gives "Live: scripted rejection" with only Live left; Exit all again gives the notice "Flat — Exited 2 account(s)."; fake-backends logged 3 POSTs (Paper once, Live twice), and both Live POSTs carry the same `client_order_id`.**
+- Screenshots: `exit-legs.png`, `exit-partial.png`.
