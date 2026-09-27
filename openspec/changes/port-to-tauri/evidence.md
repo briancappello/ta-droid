@@ -46,3 +46,10 @@
 - `src-tauri/crates/fake-backends` (axum 0.8): a lib plus a `fake-backends [--addr] [--log]` binary. It is a single listener with the prefixes `/marketstore`, `/fatechan`, `/alpaca`, and `/__control`, so one `adb reverse` or `ssh -R` tunnel exposes all of it.
 - Requests are recorded with method, path, query, and headers, both in memory (`GET`/`DELETE /__control/requests`) and optionally as JSONL. Control calls are not recorded.
 - `cargo test -p fake-backends`: 3 passed (both health endpoints return 200; the log with headers and query can be read back and cleared; the JSONL file gets one line per request, including a 404). `mise run verify:core` passes.
+
+### 2.2 G3 desktop end-to-end
+- `e2e/`: its own pnpm root with WebdriverIO 9.32 (mocha, spec reporter). The shared settings live in `support/common.ts`, `wdio.desktop.conf.ts` holds the desktop connection, and `specs/smoke.e2e.ts` checks the app root and saves a screenshot.
+- `e2e/run-desktop.sh`: builds with `--features e2e`, then starts `weston --backend=headless` (per-run socket), `fake-backends` (JSONL request log), and `tauri-driver`. Each gets a pidfile under `artifacts/g3/run/`, and an EXIT/INT/TERM trap stops them.
+- Gotcha: WebdriverIO 9 asks for WebDriver BiDi by default, and WebKitWebDriver rejects that with "Failed to match capabilities". The fix is `'wdio:enforceWebDriverClassic': true`.
+- Result: `mise run e2e:desktop` passed twice in a row (exit 0, 1 passing each). Afterwards there were no pidfiles left and no `ta-droid`, `weston`, `tauri-driver`, `WebKitWebDriver`, or `fake-backends` processes (`pgrep -x`). The screenshot `artifacts/g3/smoke-launch.png` is 412×915 and shows the app root.
+- `mise run verify` now includes G3 and exits 0.

@@ -1,0 +1,8 @@
+# Standalone pnpm root for the WebdriverIO end-to-end suite (design D11).
+packages:
+  - .
+allowBuilds:
+  esbuild: true
+  # Browser drivers for Edge and Firefox are never used here.
+  edgedriver: false
+  geckodriver: false

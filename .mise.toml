@@ -38,9 +38,19 @@ dir = "ui"
 depends = ["setup:ui"]
 run = ["pnpm typecheck", "pnpm lint", "pnpm test"]
 
+[tasks."setup:e2e"]
+description = "Install the WebdriverIO suite from the lockfile"
+dir = "e2e"
+run = ["pnpm install --frozen-lockfile", "pnpm typecheck"]
+
+[tasks."e2e:desktop"]
+description = "G3: desktop end-to-end on WebKitGTK under headless weston"
+depends = ["setup:e2e", "build:ui"]
+run = "e2e/run-desktop.sh"
+
 [tasks.verify]
 description = "Fast gates: G1-G4"
-depends = ["verify:core", "verify:ui"]
+depends = ["verify:core", "verify:ui", "e2e:desktop"]
 run = "echo 'verify: all gates passed'"
 
 [tasks."verify:slow"]
