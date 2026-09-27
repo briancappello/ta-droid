@@ -1,0 +1,38 @@
+/* Shared building blocks: rows, badges, empty states, banners, modals. */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+  padding: 16px;
+  border-bottom: 1px solid #2a2a4a;
+  gap: 12px;
+}
+.rowLabel { font-size: 15px; }
+.rowRight { display: flex; align-items: center; gap: 8px; }
+.rowValue { color: #8a97b0; font-size: 13px; }
+.chev { color: #6b7690; font-size: 18px; }
+.item { padding: 14px; border-bottom: 1px solid #2a2a4a; }
+.itemTitle { font-size: 16px; font-weight: 700; }
+.sub { color: #999; font-size: 12px; margin-top: 2px; }
+.paper { color: #8a97b0; font-size: 12px; font-weight: 400; margin-left: 6px; }
+.empty { padding: 32px 24px; color: #888; font-size: 14px; text-align: center; }
+.banner { background: #3a1f24; color: #ff8a80; padding: 10px 14px; font-size: 13px; }
+.link { color: var(--accent); font-weight: 600; }
+.pickerButton {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: var(--bg);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 24px; }
+.menu { background: var(--panel); border: 1px solid #333; border-radius: 8px; min-width: 200px; max-width: 100%; max-height: 80%; overflow-y: auto; }
+.menuItem { display: block; width: 100%; text-align: left; padding: 12px 20px; color: #ccc; font-size: 14px; }
+.menuItemActive { background: var(--accent); color: #fff; font-weight: 700; }
+.up { color: var(--up); }
+.down { color: var(--down); }

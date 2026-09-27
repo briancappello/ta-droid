@@ -1,5 +1,6 @@
 // Backend health and profiles (backend-profiles spec).
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import type { ProfileView } from '../bindings/ProfileView';
 import { api } from '../ipc';
 
 export type BackendHealth = 'up' | 'down' | 'unknown';
@@ -12,12 +13,20 @@ type Ctx = {
   health: HealthByBackend;
   setHealth: (h: HealthByBackend) => void;
   refresh: () => Promise<void>;
+  profiles: ProfileView[];
+  activeProfile: string | null;
+  /** Load the profile list (Backend and Settings screens call this). */
+  loadProfiles: () => Promise<void>;
+  /** Switch profiles: persisted by the backend, then health re-probes. */
+  selectProfile: (name: string) => Promise<void>;
 };
 
 const BackendCtx = createContext<Ctx | null>(null);
 
 export function BackendProvider({ children, poll = false }: { children: ReactNode; poll?: boolean }) {
   const [health, setHealth] = useState<HealthByBackend>(UNKNOWN);
+  const [profiles, setProfiles] = useState<ProfileView[]>([]);
+  const [activeProfile, setActiveProfile] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -38,7 +47,28 @@ export function BackendProvider({ children, poll = false }: { children: ReactNod
     return () => clearInterval(id);
   }, [poll, refresh]);
 
-  return <BackendCtx.Provider value={{ health, setHealth, refresh }}>{children}</BackendCtx.Provider>;
+  const loadProfiles = useCallback(async () => {
+    const v = await api.listProfiles();
+    setProfiles(v.profiles);
+    setActiveProfile(v.active);
+  }, []);
+
+  const selectProfile = useCallback(
+    async (name: string) => {
+      const v = await api.setActiveProfile(name);
+      setProfiles(v.profiles);
+      setActiveProfile(v.active);
+      setHealth(UNKNOWN);
+      await refresh();
+    },
+    [refresh],
+  );
+
+  return (
+    <BackendCtx.Provider value={{ health, setHealth, refresh, profiles, activeProfile, loadProfiles, selectProfile }}>
+      {children}
+    </BackendCtx.Provider>
+  );
 }
 
 export function useBackend(): Ctx {

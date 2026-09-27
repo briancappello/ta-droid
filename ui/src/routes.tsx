@@ -1,6 +1,9 @@
 import { Navigate, type RouteObject } from 'react-router';
 import { Shell } from './components/Shell';
 import * as S from './screens/placeholders';
+import { AccountsScreen } from './screens/AccountsScreen';
+import { BackendScreen } from './screens/BackendScreen';
+import { SettingsScreen } from './screens/SettingsScreen';
 
 export const DEFAULT_TICKER = 'AMD';
 
@@ -17,9 +20,9 @@ export const routes: RouteObject[] = [
       { path: '/positions', element: <S.PositionsScreen /> },
       { path: '/orders', element: <S.OrdersScreen /> },
       { path: '/watchlists', element: <S.WatchlistsScreen /> },
-      { path: '/settings', element: <S.SettingsScreen /> },
-      { path: '/settings/accounts', element: <S.AccountsScreen /> },
-      { path: '/settings/backend', element: <S.BackendScreen /> },
+      { path: '/settings', element: <SettingsScreen /> },
+      { path: '/settings/accounts', element: <AccountsScreen /> },
+      { path: '/settings/backend', element: <BackendScreen /> },
     ],
   },
 ];

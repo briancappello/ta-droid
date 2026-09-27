@@ -417,3 +417,19 @@
   - **`browser.reloadSession()` starts a new app process on the same data dir, which opens with no prompt.**
 - Screenshots: `provisioning-prompt.png` and `provisioning-wrong.png`.
 - The first full verify after 5.2 failed the 4.4 security spec. Its check "fake-backends saw no `/fatechan/health`" became invalid once the UI started polling health, because the *backend* now calls that path legitimately. The spec now fetches `/fatechan/csp-probe`, a path only a UI request could produce.
+
+### 5.3 Settings, Accounts, Backend
+- Screens:
+  - `SettingsScreen`: "Accounts — N linked" and "Backend — <active profile>".
+  - `AccountsScreen`: read-only; name, "paper" badge, `id · ••••last4`, and the RN empty-state text.
+  - `BackendScreen`: every profile with its URLs, "auth"/"custom CA" flags (never values), and the active profile's live MS/FA state. Tapping switches.
+  - `AccountPicker`: a modal list with the selection highlighted; choosing or tapping outside closes it.
+- `BackendProvider` gains `profiles`, `activeProfile`, `loadProfiles`, and `selectProfile` (switch, then reset health to unknown and re-probe). Shared `Modal` and `ui.module.css`, plus a test helper `renderAt`.
+- Vitest (8 new; 27 total):
+  - the ported settings (1), accountsScreen (3), and accountPicker (3) cases, with the picker's close-on-choose and close-on-outside;
+  - a Backend switch sends `set_active_profile` and re-probes health.
+- G3 `e2e/specs/settings.e2e.ts`: 2 passing:
+  - 2 linked accounts with `••••0001` and paper badges only on paper;
+  - **switching to `e2e-auth` gets MS/FA up, and fake-backends logs `cf-access-client-id: test-client-id` on the health probe; after `reloadSession()` (a new app process) Settings still shows `e2e-auth`.**
+  - The `after` hook restores the `e2e` profile.
+- Screenshots: `settings-accounts.png`, `settings-backend.png`.
