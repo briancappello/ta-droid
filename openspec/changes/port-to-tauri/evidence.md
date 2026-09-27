@@ -110,3 +110,13 @@
 - `config/app-config.example.toml` (a `local` profile at 127.0.0.1:5993 and :8000, with the other profiles commented) and `config/app-config.e2e.toml` (the `e2e` and `e2e-auth` profiles, Alpaca hosts, and two test accounts, all on fake-backends :8787) are committed. `config/app-config.toml` is gitignored.
 - The app's `build.rs` selects the config in this order: `TA_DROID_CONFIG`, then the e2e config with `--features e2e`, then `app-config.toml`, then the example. It validates the file with `ta-core` and embeds it through `OUT_DIR`. An invalid file fails the build: `TA_DROID_CONFIG=bad.toml cargo check` gives "invalid app config …: app config defines no backend profiles".
 - `cargo test -p ta-core`: 5 passed (valid config; malformed accounts give an empty list; a missing or malformed blob gives `None`; default broker hosts; profiles required and unique). The app test `embedded_config_parses` passes, including under `--all-features` (the e2e profile comes first). `mise run verify`: exit 0.
+
+### 3.2 Key-value stores
+- `ta_core::store`: the `KvStore` trait (blocking `get`/`set`/`delete`; deleting a missing key is fine) with these implementations:
+  - `MemoryStore` for tests.
+  - `FileStore`: one JSON object, atomic rename, mode 0600, and a corrupt file reads as empty. It holds preferences, and it holds secrets in `e2e` builds.
+  - `KeyringStore`: any keyring-core 1.0 credential store. `KeyringStore::secret_service()` uses `zbus-secret-service-keyring-store` 1.0.1 (pure-Rust crypto).
+- Found for 6.3: keyring's `android-native-keyring-store` 1.0.0 exists, which is the first candidate for the Android store. It plugs into the same `KeyringStore`.
+- `cargo test -p ta-core --test store`: 3 passed (memory and file contracts, persistence and 0600, corrupt file).
+- The Secret Service contract runs with `mise run test:secret-service` and passes (1 passed) against the desktop's KDE `ksecretd` (`org.freedesktop.secrets`), which Plasma Mobile also uses. It is not in `verify`, because it writes to the user's real wallet (a test service name, deleted afterwards). An isolated `dbus-run-session` was not possible: gnome-keyring is not installed ("The name org.freedesktop.secrets was not provided by any .service files").
+- `mise run verify`: exit 0.

@@ -33,6 +33,11 @@ run = [
   "cargo test --workspace --all-features",
 ]
 
+[tasks."test:secret-service"]
+description = "SecretStore contract against the session's Secret Service (writes, then deletes, test items)"
+dir = "src-tauri"
+run = "cargo test -p ta-core --test store -- --ignored"
+
 [tasks."verify:ui"]
 description = "G2: UI typecheck, lint, and tests"
 dir = "ui"
