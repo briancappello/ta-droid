@@ -90,3 +90,15 @@
   - Packaging is now section 7 and the end batch section 8.
 - design.md D11 and the Risks section are updated to match.
 - `mise run verify` is now G1–G3 only and takes 12 s. `verify:mobile` holds G4.
+
+### 2.3 talib-sys
+- Pinned TA-Lib C **0.6.4**, not the latest (0.8.1). fa-techan's `uv.lock` pins the Python `ta-lib` 0.6.8 wheel, which is built on C 0.6.4. fa-techan calls `SMA(100/200)`, `BBANDS(close, timeperiod=20)` (defaults: 2/2, SMA), `MACD(close)` (12/26/9), and `RSI(close)` (14) (`app/api/v1/finance/history.py:49-57`).
+- Tarball sha256 `aa04066d…a3ae86`. The vendored files (`include/`, `src/ta_common`, `src/ta_func`, 3.8 MB), the BSD license, and `VENDOR.md` are in `src-tauri/crates/talib-sys/vendor/ta-lib-0.6.4/`. They are compiled with `cc`, with upstream warnings muted.
+- The safe wrappers `sma`, `bbands` (SMA type), `macd`, and `rsi` return input-aligned `Vec<Option<f64>>`. `TA_Initialize` runs once, the way the Python binding does on import.
+- `cargo test -p talib-sys`: 5 passed:
+  - hand-computed SMA with null warmup;
+  - empty and too-short input;
+  - BBANDS population σ (upper 9, lower 1 for mean 5, σ 2);
+  - MACD lookback 33 with hist = macd − signal, and RSI lookback 14 with values in range;
+  - invalid period is an error.
+- `mise run verify`: exit 0.

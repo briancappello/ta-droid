@@ -17,7 +17,7 @@ Tasks marked **Operator** need the human. They are grouped into the start batch 
 
 - [x] 2.1 Create the `fake-backends` crate. It serves `/v1/health` and `/health` and writes a JSON request log. Verify: `cargo test -p fake-backends` passes, including a test that reads back the request log.
 - [x] 2.2 Build G3. A script starts `weston --backend=headless`, records its PID in a pidfile, and runs `tauri-driver` with a WebdriverIO smoke spec: the app launches, and a screenshot goes to `artifacts/g3/`. Verify: `mise run e2e:desktop` passes twice in a row, and no weston or driver process is left afterwards (checked by pidfile).
-- [ ] 2.3 Add the `talib-sys` crate: vendor the pinned TA-Lib 0.6.x source with its checksum and build it with `cc`, with an SMA smoke test. Verify: the SMA test passes on `x86_64-unknown-linux-gnu`. (Cross targets are checked in 6.4.)
+- [x] 2.3 Add the `talib-sys` crate: vendor the pinned TA-Lib 0.6.x source with its checksum and build it with `cc`, with an SMA smoke test. Verify: the SMA test passes on `x86_64-unknown-linux-gnu`. (Cross targets are checked in 6.4.)
 
 ## 3. Rust core (`crates/core`, `crates/provision`)
 

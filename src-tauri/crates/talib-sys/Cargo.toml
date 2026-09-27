@@ -1,0 +1,12 @@
+[package]
+name = "talib-sys"
+version = "0.1.0"
+description = "Vendored TA-Lib C 0.6.4 (the version fa-techan uses) with a small safe wrapper"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+links = "ta-lib"
+
+[build-dependencies]
+cc = "1"
