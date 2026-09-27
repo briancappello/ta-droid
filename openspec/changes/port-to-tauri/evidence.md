@@ -311,3 +311,20 @@
 - Symptom: `mise run verify` failed once, with the app root not displayed after 20 s; `mise run e2e:desktop` alone passed.
 - Root cause: in G1, `cargo test --workspace --all-features` rebuilds `target/debug/ta-droid` without Tauri's custom protocol, giving a blank app that points at the dev URL. It runs in parallel with G3, so it could replace the binary G3 had just built with `cargo tauri build`.
 - Fix: `run-desktop.sh` and `run-android.sh` build into their own `CARGO_TARGET_DIR=src-tauri/target/e2e`, and G3 launches that binary through `TA_DROID_APP`. Two consecutive full `mise run verify` runs then passed.
+
+### 4.2 Market-data commands and streams
+- Commands: `history`, `quotes`, `watchlists`, `watchlist_entries`, `subscribe_bars(symbol, timeframe, Channel<LiveBar>)`, `subscribe_watchlist(id, Channel<Vec<WatchRow>>)`, and `unsubscribe(id)` (idempotent).
+- `ta_core::stream` gains the typed payloads `LiveBar` (ts-rs, `epoch: number`), `bar_key`, `as_bar` (only `msg_type: bar`), and `as_watchlist_rows` (only `watchlist_update`; the payload symbols become full rows).
+- `AppState` keeps a registry of UI subscriptions. Each one is a forwarder task from the current `StreamClient` to a sink.
+  - A sink returning false (the receiver is gone) ends the subscription, and the backend unsubscribes.
+  - **On a profile switch, every open subscription moves to the new stream with the same sink.** Aborting the old forwarders drops their `Subscription`s, so the old socket closes.
+  - Tauri `Channel::send` does not report a JS-side drop, so the UI must call `unsubscribe` on unmount. The sink check covers any case where the send does fail.
+- fake-backends records every WS subscribe union (`/__control/ws-subscribes`, `FakeState::ws_subscribes`).
+- Tests:
+  - `cargo test -p ta-core --test stream_payloads`: 3 passed.
+  - `cargo test -p ta-droid --test market_data`: 4 passed, stable over 5 runs:
+    - typed results and user-facing errors;
+    - bar and watchlist deliveries;
+    - **dropping one receiver shrinks the server's subscribe set from [AAPL, MSFT] to [AAPL]**, then an idempotent `unsubscribe` takes it to [];
+    - a profile switch keeps delivering to the same sink over a new socket.
+- Bindings regenerated (`LiveBar`). `mise run verify`: exit 0.

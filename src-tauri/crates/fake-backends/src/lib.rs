@@ -100,6 +100,8 @@ struct Inner {
     orders: HashMap<String, Vec<Value>>,
     strategies: Vec<Value>,
     next_order: u64,
+    /// Every `subscribe` union received on any socket, oldest first.
+    ws_subscribes: Vec<Vec<String>>,
 }
 
 impl Inner {
@@ -144,6 +146,11 @@ impl FakeState {
     /// A snapshot of every recorded request, oldest first.
     pub async fn requests(&self) -> Vec<LoggedRequest> {
         self.inner.lock().await.requests.clone()
+    }
+
+    /// Every WS subscribe union received, oldest first.
+    pub async fn ws_subscribes(&self) -> Vec<Vec<String>> {
+        self.inner.lock().await.ws_subscribes.clone()
     }
 
     /// Push a stream message to every socket subscribed to `key`.
@@ -355,8 +362,13 @@ async fn ws_session(state: FakeState, mut socket: WebSocket) {
                 Some(Ok(Message::Text(t))) => {
                     let Ok(v) = serde_json::from_str::<Value>(t.as_str()) else { continue };
                     if v["action"] == "subscribe" {
-                        subscribed = v["tbks"].as_array().into_iter().flatten()
-                            .filter_map(|x| x.as_str().map(str::to_owned)).collect();
+                        subscribed = v["tbks"]
+                            .as_array()
+                            .into_iter()
+                            .flatten()
+                            .filter_map(|x| x.as_str().map(str::to_owned))
+                            .collect();
+                        state.inner.lock().await.ws_subscribes.push(subscribed.clone());
                         let ack = json!({"action": "subscribed", "tbks": subscribed});
                         if socket.send(Message::text(ack.to_string())).await.is_err() {
                             return;
@@ -596,6 +608,11 @@ async fn control_strategies(
     StatusCode::NO_CONTENT
 }
 
+/// Every WS subscribe union received, oldest first.
+async fn control_ws_subscribes(State(state): State<FakeState>) -> Json<Vec<Vec<String>>> {
+    Json(state.inner.lock().await.ws_subscribes.clone())
+}
+
 /// Orders the fake broker has accepted for an API key id.
 async fn control_orders(State(state): State<FakeState>) -> Json<BTreeMap<String, Vec<Value>>> {
     Json(
@@ -645,6 +662,7 @@ pub fn router(state: FakeState) -> Router {
         .route("/__control/push", post(control_push))
         .route("/__control/strategies", post(control_strategies))
         .route("/__control/orders", get(control_orders))
+        .route("/__control/ws-subscribes", get(control_ws_subscribes))
         .fallback(not_found)
         .layer(middleware::from_fn_with_state(
             state.clone(),

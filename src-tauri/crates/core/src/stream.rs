@@ -283,3 +283,46 @@ async fn run(cfg: StreamConfig, mut cmds: mpsc::UnboundedReceiver<Cmd>) {
         }
     }
 }
+
+/// A live bar (`msg_type: "bar"`). `epoch` is the period start, unix seconds.
+#[derive(ts_rs::TS)]
+#[ts(export)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LiveBar {
+    #[serde(default)]
+    pub symbol: String,
+    pub open: f64,
+    pub high: f64,
+    pub low: f64,
+    pub close: f64,
+    pub volume: f64,
+    #[ts(type = "number")]
+    pub epoch: i64,
+}
+
+/// The chart's stream key for a symbol and MarketStore timeframe.
+pub fn bar_key(symbol: &str, timeframe: &str) -> String {
+    format!("{}/{timeframe}/OHLCV", symbol.to_uppercase())
+}
+
+/// A `bar` message's payload, or None for anything else.
+pub fn as_bar(m: &StreamMessage) -> Option<LiveBar> {
+    if m.data.get("msg_type")?.as_str()? != "bar" {
+        return None;
+    }
+    serde_json::from_value(m.data.get("payload")?.clone()).ok()
+}
+
+/// A `watchlist_update` message as display rows, or None for anything else.
+pub fn as_watchlist_rows(m: &StreamMessage) -> Option<Vec<crate::watchlists::WatchRow>> {
+    if m.data.get("msg_type")?.as_str()? != "watchlist_update" {
+        return None;
+    }
+    let symbols = m.data.get("payload")?.get("symbols")?.as_array()?;
+    Some(
+        symbols
+            .iter()
+            .filter_map(|s| s.as_object().map(crate::watchlists::to_row))
+            .collect(),
+    )
+}

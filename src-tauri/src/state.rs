@@ -1,13 +1,19 @@
 //! Application state behind the Tauri commands. Everything here is plain
 //! Rust so it is tested without a window; `commands.rs` only adapts it to IPC.
 
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
+
 use serde::Serialize;
 use ta_core::accounts::{self, Account, AccountView};
 use ta_core::broker::alpaca::Alpaca;
 use ta_core::config::AppConfig;
+use ta_core::marketstore::{self as ms, History, Quote};
 use ta_core::profiles::{self, Backend, HealthReport, ProfileView};
 use ta_core::store::SharedStore;
-use ta_core::stream::{StreamClient, StreamConfig};
+use ta_core::stream::{self, LiveBar, StreamClient, StreamConfig, StreamMessage};
+use ta_core::watchlists::{self, WatchRow, WatchlistRef};
 use ta_provision::flow::{self, Action, Outcome};
 use tokio::sync::RwLock;
 
@@ -50,6 +56,39 @@ pub struct ProfilesView {
     pub active: String,
 }
 
+/// Delivers one live message to the UI. Returns false once the receiver is
+/// gone, which ends the subscription.
+pub type Sink = Arc<dyn Fn(StreamMessage) -> bool + Send + Sync>;
+
+/// One UI subscription: its keys and sink, plus the task forwarding from the
+/// current stream. The task is replaced when the profile changes.
+struct Sub {
+    tbks: Vec<String>,
+    sink: Sink,
+    task: tokio::task::JoinHandle<()>,
+}
+
+/// Forward `tbks` from `stream` into `sink` until the sink is gone, then
+/// drop the registry entry (which unsubscribes).
+fn forward(
+    stream: &StreamClient,
+    id: u64,
+    tbks: Vec<String>,
+    sink: Sink,
+    subs: Arc<Mutex<HashMap<u64, Sub>>>,
+) -> tokio::task::JoinHandle<()> {
+    let mut sub = stream.subscribe(tbks);
+    tokio::spawn(async move {
+        while let Some(m) = sub.recv().await {
+            if !sink(m) {
+                break;
+            }
+        }
+        drop(sub);
+        subs.lock().unwrap().remove(&id);
+    })
+}
+
 /// State that changes with provisioning and the active profile.
 pub struct Live {
     pub accounts: Vec<Account>,
@@ -63,6 +102,8 @@ pub struct AppState {
     pub secrets: SharedStore,
     pub prefs: SharedStore,
     pub live: RwLock<Live>,
+    subs: Arc<Mutex<HashMap<u64, Sub>>>,
+    next_sub: AtomicU64,
 }
 
 fn backend_for(
@@ -100,6 +141,8 @@ impl AppState {
             config,
             secrets,
             prefs,
+            subs: Arc::default(),
+            next_sub: AtomicU64::new(1),
         })
     }
 
@@ -133,6 +176,21 @@ impl AppState {
         let accounts = accounts::load(&self.config.accounts, self.secrets.as_ref());
         let (backend, stream) = backend_for(&self.config, &self.prefs, &self.secrets)?;
         let mut live = self.live.write().await;
+        // Move every open subscription to the new stream. Dropping the old
+        // forwarders drops their subscriptions, so the old socket closes.
+        {
+            let mut subs = self.subs.lock().unwrap();
+            for (id, sub) in subs.iter_mut() {
+                sub.task.abort();
+                sub.task = forward(
+                    &stream,
+                    *id,
+                    sub.tbks.clone(),
+                    sub.sink.clone(),
+                    self.subs.clone(),
+                );
+            }
+        }
         live.accounts = accounts;
         live.backend = backend;
         live.stream = stream;
@@ -170,6 +228,95 @@ impl AppState {
             .map_err(|e| CmdError::new(e.to_string()))?;
         self.reload().await?;
         Ok(self.profiles().await)
+    }
+
+    async fn backend(&self) -> Backend {
+        self.live.read().await.backend.clone()
+    }
+
+    pub async fn history(
+        &self,
+        symbol: &str,
+        freq: &str,
+        limit: Option<usize>,
+    ) -> CmdResult<History> {
+        ms::history(&self.backend().await, symbol, freq, limit)
+            .await
+            .map_err(|e| CmdError::new(e.to_string()))
+    }
+
+    pub async fn quotes(&self, symbols: &[String]) -> CmdResult<Vec<Quote>> {
+        ms::quotes(&self.backend().await, symbols)
+            .await
+            .map_err(|e| CmdError::new(e.to_string()))
+    }
+
+    pub async fn watchlists(&self) -> CmdResult<Vec<WatchlistRef>> {
+        watchlists::list(&self.backend().await)
+            .await
+            .map_err(|e| CmdError::new(e.to_string()))
+    }
+
+    pub async fn watchlist_entries(&self, id: &str) -> CmdResult<Vec<WatchRow>> {
+        watchlists::entries(&self.backend().await, id)
+            .await
+            .map_err(|e| CmdError::new(e.to_string()))
+    }
+
+    /// Subscribe `sink` to raw stream messages for `tbks`. Returns an id for
+    /// [`AppState::unsubscribe`].
+    pub async fn subscribe(&self, tbks: Vec<String>, sink: Sink) -> u64 {
+        let id = self.next_sub.fetch_add(1, Ordering::Relaxed);
+        let live = self.live.read().await;
+        let mut subs = self.subs.lock().unwrap();
+        let task = forward(
+            &live.stream,
+            id,
+            tbks.clone(),
+            sink.clone(),
+            self.subs.clone(),
+        );
+        subs.insert(id, Sub { tbks, sink, task });
+        id
+    }
+
+    /// Live bars for a chart: `bar` messages only.
+    pub async fn subscribe_bars(
+        &self,
+        symbol: &str,
+        timeframe: &str,
+        deliver: impl Fn(LiveBar) -> bool + Send + Sync + 'static,
+    ) -> u64 {
+        let sink: Sink = Arc::new(move |m| match stream::as_bar(&m) {
+            Some(b) => deliver(b),
+            None => true,
+        });
+        self.subscribe(vec![stream::bar_key(symbol, timeframe)], sink)
+            .await
+    }
+
+    /// Watchlist re-rankings as full row sets.
+    pub async fn subscribe_watchlist(
+        &self,
+        id: &str,
+        deliver: impl Fn(Vec<WatchRow>) -> bool + Send + Sync + 'static,
+    ) -> u64 {
+        let sink: Sink = Arc::new(move |m| match stream::as_watchlist_rows(&m) {
+            Some(rows) => deliver(rows),
+            None => true,
+        });
+        self.subscribe(vec![watchlists::stream_key(id)], sink).await
+    }
+
+    /// End a subscription. Unknown ids are ignored (idempotent).
+    pub fn unsubscribe(&self, id: u64) {
+        if let Some(sub) = self.subs.lock().unwrap().remove(&id) {
+            sub.task.abort();
+        }
+    }
+
+    pub fn subscription_count(&self) -> usize {
+        self.subs.lock().unwrap().len()
     }
 
     pub async fn health(&self) -> HealthReport {

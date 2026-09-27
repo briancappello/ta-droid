@@ -33,6 +33,13 @@ pub fn run() {
             commands::list_profiles,
             commands::set_active_profile,
             commands::health,
+            commands::history,
+            commands::quotes,
+            commands::watchlists,
+            commands::watchlist_entries,
+            commands::subscribe_bars,
+            commands::subscribe_watchlist,
+            commands::unsubscribe,
         ])
         .run(tauri::generate_context!())
         .expect("error while running the ta-droid application");
