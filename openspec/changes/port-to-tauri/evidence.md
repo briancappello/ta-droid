@@ -195,3 +195,13 @@
 
   I added a **same-input reference**, `talibSameInput.json`, made by `make-talib-reference.py` with fa-techan's `.venv` TA-Lib on the fixture's 400 closes. On it every column is **≤ 2.2e-16** (bit-level), and the warmup nulls are identical. The indicators spec and task 3.7 now state both bounds: same input 1e-9 on all columns; stored output 1e-9 for SMA and BB, 1e-6 for MACD and RSI. `openspec validate --strict` passes.
 - `cargo test -p ta-core --test indicators`: 8 passed (the 5 ported `indicators.test.ts` cases, plus three parity tests). `mise run verify`: exit 0.
+
+### 3.8 MarketStore REST
+- `ta_core::marketstore`:
+  - `freq_to_timeframe` (unknown gives the error "Unknown frequency: x").
+  - `bars`, `quotes` (empty list: no request; serialized as `ticker`/`date` like the RN `ApiQuote`), `watchlists`, `watchlist`.
+  - `history` and `build_history`: fetches `limit + 200`, computes the indicators over the full series, and slices to `limit`. The result is columnar with an epoch-ms index; OHLCV is always set and indicators are `None` during warmup.
+  - Errors: "Can't reach market data — check your connection."; the server's `error` text; or "Market data error: <status>" (also for a 2xx body that does not parse).
+- `ta_core::watchlists`: `label` (10 friendly names, unknown shown raw), `to_row`, `stream_key`, `list`, and `entries` (REST `fields` merged in).
+- DTO field names are snake_case (`price_up`, `change_pct`, …); the UI uses the generated types from 4.1.
+- `cargo test -p ta-core --test marketstore`: 18 passed. That covers all 24 cases of `marketstore.test.ts` (9), `apiHistory.test.ts` (4), `apiQuotes.test.ts` (3), and `watchlists.test.ts` (6), merged where one Rust test checks several of them, plus unknown frequency making no request and a non-JSON 502. `mise run verify`: exit 0.

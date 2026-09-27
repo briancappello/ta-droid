@@ -19,6 +19,7 @@ webpki-roots = "1"
 rustls-pki-types = "1"
 tokio.workspace = true
 futures = "0.3"
+chrono = { version = "0.4", default-features = false, features = ["std"] }
 keyring-core = "1"
 zeroize = { version = "1", features = ["derive"] }
 
@@ -26,6 +27,7 @@ zeroize = { version = "1", features = ["derive"] }
 zbus-secret-service-keyring-store = { version = "1", features = ["crypto-rust"] }
 
 [dev-dependencies]
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 tempfile = "3"
 wiremock = "0.6"
 rcgen = "0.14"

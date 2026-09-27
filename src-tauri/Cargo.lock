@@ -4271,6 +4271,7 @@ dependencies = [
 name = "ta-core"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "futures",
  "keyring-core",
  "rcgen",

@@ -5,6 +5,8 @@ pub mod accounts;
 pub mod config;
 pub mod indicators;
 pub mod keys;
+pub mod marketstore;
 pub mod net;
 pub mod profiles;
 pub mod store;
+pub mod watchlists;
