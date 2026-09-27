@@ -36,8 +36,15 @@ wait_port() { # host:port, seconds
   return 1
 }
 
+# mise runs build:ui first; skip Tauri's own UI build then, so parallel
+# gates never write ui/dist at the same time.
+TAURI_EXTRA=()
+if [[ ${UI_PREBUILT:-0} == 1 ]]; then
+  TAURI_EXTRA=(--config '{"build":{"beforeBuildCommand":""}}')
+fi
+
 if [[ ${SKIP_BUILD:-0} != 1 ]]; then
-  (cd "$ROOT/src-tauri" && cargo tauri build --debug --no-bundle --features e2e)
+  (cd "$ROOT/src-tauri" && cargo tauri build --debug --no-bundle --features e2e "${TAURI_EXTRA[@]}")
   (cd "$ROOT/src-tauri" && cargo build -p fake-backends)
 fi
 

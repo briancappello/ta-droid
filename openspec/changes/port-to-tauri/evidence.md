@@ -53,3 +53,14 @@
 - Gotcha: WebdriverIO 9 asks for WebDriver BiDi by default, and WebKitWebDriver rejects that with "Failed to match capabilities". The fix is `'wdio:enforceWebDriverClassic': true`.
 - Result: `mise run e2e:desktop` passed twice in a row (exit 0, 1 passing each). Afterwards there were no pidfiles left and no `ta-droid`, `weston`, `tauri-driver`, `WebKitWebDriver`, or `fake-backends` processes (`pgrep -x`). The screenshot `artifacts/g3/smoke-launch.png` is 412×915 and shows the app root.
 - `mise run verify` now includes G3 and exits 0.
+
+### 2.3 G4 Android end-to-end
+- `cargo tauri android init --ci` generated `src-tauri/gen/android` (committed). It has `namespace` and `applicationId` `com.briancappello.ta_droid`, `minSdk 24`, and `compileSdk`/`targetSdk` 37. The identifier mapping from 1.4 is confirmed: `aapt2 dump badging` reports `package: name='com.briancappello.ta_droid'`. The init also installed the armv7 and i686 Rust targets, which are not used.
+- The debug x86_64 APK (`--features e2e`) builds as `app-universal-debug.apk`.
+- Appium 3.8.0 is an e2e dev dependency. The UiAutomator2 driver 8.7.0 lives in `e2e/.appium` (gitignored), and `setup:e2e` installs it when it is missing. `wdio.android.conf.ts` uses `autoWebview` and `chromedriverAutodownload` (server flag `--allow-insecure uiautomator2:chromedriver_autodownload`), so `specs/` is shared with G3 unchanged.
+- `e2e/run-android.sh`:
+  - Boots `Pixel_8` with `-no-window -no-audio -no-snapshot -gpu swiftshader_indirect` on console port 5580 (serial `emulator-5580`, so it never touches a real device) and waits for `sys.boot_completed`.
+  - Maps device port 8787 to host port 8788 with `adb reverse`, which lets G3 and G4 run in parallel.
+  - Starts Appium. Pidfiles plus `adb emu kill` clean up on exit.
+- `UI_PREBUILT=1` (set by the mise tasks) skips Tauri's `beforeBuildCommand`, so parallel gates never write `ui/dist` at the same time.
+- Results: `mise run e2e:android` exits 0 with 1 passing, and `artifacts/g4/smoke-launch.png` shows the app root in the Android WebView. Afterwards `adb devices` is empty and no pidfiles remain. `mise run verify` (G1–G4 in parallel) exits 0.

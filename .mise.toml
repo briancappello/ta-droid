@@ -41,16 +41,26 @@ run = ["pnpm typecheck", "pnpm lint", "pnpm test"]
 [tasks."setup:e2e"]
 description = "Install the WebdriverIO suite from the lockfile"
 dir = "e2e"
-run = ["pnpm install --frozen-lockfile", "pnpm typecheck"]
+run = [
+  "pnpm install --frozen-lockfile",
+  "pnpm typecheck",
+  "APPIUM_HOME=$PWD/.appium pnpm exec appium driver list --installed --json | grep -q uiautomator2 || APPIUM_HOME=$PWD/.appium pnpm exec appium driver install uiautomator2@8.7.0",
+]
 
 [tasks."e2e:desktop"]
 description = "G3: desktop end-to-end on WebKitGTK under headless weston"
 depends = ["setup:e2e", "build:ui"]
-run = "e2e/run-desktop.sh"
+run = "UI_PREBUILT=1 e2e/run-desktop.sh"
+
+[tasks."e2e:android"]
+description = "G4: Android end-to-end on the headless Pixel_8 emulator through Appium"
+depends = ["setup:e2e", "build:ui"]
+# The emulator console and adb ports are shared, so never run two at once.
+run = "UI_PREBUILT=1 e2e/run-android.sh"
 
 [tasks.verify]
 description = "Fast gates: G1-G4"
-depends = ["verify:core", "verify:ui", "e2e:desktop"]
+depends = ["verify:core", "verify:ui", "e2e:desktop", "e2e:android"]
 run = "echo 'verify: all gates passed'"
 
 [tasks."verify:slow"]

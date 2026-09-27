@@ -2,6 +2,7 @@
 packages:
   - .
 allowBuilds:
+  appium: true
   esbuild: true
   # Browser drivers for Edge and Firefox are never used here.
   edgedriver: false
