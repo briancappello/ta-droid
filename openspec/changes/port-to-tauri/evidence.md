@@ -152,3 +152,16 @@
   - outcomes serialize as a bare tag;
   - the real crypto end to end on the Node fixture (wrong, then right passphrase).
 - No-secrets-in-logs: the flow has no logging, and its only outputs are the payload-free `Outcome` tag and the store writes. Key material is zeroized, and `Debug` redacts it (3.3). `mise run verify`: exit 0.
+
+### 3.5 Accounts
+- `ta_core::accounts`:
+  - `Account` holds the key and secret, is zeroized on drop, and its `Debug` redacts them.
+  - `AccountView` has `id`, `name`, `broker`, `is_paper`, and `key_last4`, and nothing else.
+  - `load` joins the metadata with `cred.<broker>:<id>` and skips a missing, unreadable, or malformed credential.
+  - `active_id` returns the persisted id if it is still loaded, else the first account, else none. `set_active_id` ignores write errors.
+- `cargo test -p ta-core --test accounts`: 8 passed:
+  - the 3 ported `accounts.test.ts` cases, plus a corrupt credential;
+  - the active-account cases from `accountContext`: default first, switch and persist, stale id falls back, no accounts gives none;
+  - a broken preference store is ignored;
+  - serialized `AccountView` has exactly `broker, id, is_paper, key_last4, name`, with no key or secret text, and `Debug` redacts too.
+- `mise run verify`: exit 0.
