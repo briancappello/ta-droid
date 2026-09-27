@@ -4279,6 +4279,7 @@ dependencies = [
  "rustls-pki-types",
  "serde",
  "serde_json",
+ "talib-sys",
  "tempfile",
  "thiserror 2.0.21",
  "tokio",

@@ -185,3 +185,13 @@
   - **a private-CA TLS server (rcgen CA plus leaf, tokio-rustls) is rejected without the profile CA and accepted with it**;
   - invalid CA PEM is a setup error.
 - The health default of "unknown" and the 20 s polling from `backendContext.test.tsx` are UI state, covered in 5.1. `mise run verify`: exit 0.
+
+### 3.7 Indicators
+- `ta_core::indicators::compute` returns the 9 columns in chart order through `talib-sys`, with the same calls as fa-techan (`BBANDS(20)` middle = `sma20`, `SMA(100/200)`, `MACD(12,26,9)`, `RSI(14)`).
+- fa-techan's own environment reports `talib.__version__` 0.6.8 and `__ta_version__` `0.6.4 (Oct 20 2025)`, which confirms the pin from 2.3.
+- **Spec correction:** 1e-9 on every column against `faTechanHistory.json` is not achievable. fa-techan computed that fixture over a longer history (`sma1000` is set from row 0), so the EMA-seeded columns carry a decayed seeding difference. Measured on the last 100 bars against the stored output:
+  - sma20/100/200 about 2e-13, bbands about 3e-13;
+  - macd 2.0e-8, macd_signal 7.3e-9, macd_difference 1.1e-8, rsi 9.1e-11.
+
+  I added a **same-input reference**, `talibSameInput.json`, made by `make-talib-reference.py` with fa-techan's `.venv` TA-Lib on the fixture's 400 closes. On it every column is **≤ 2.2e-16** (bit-level), and the warmup nulls are identical. The indicators spec and task 3.7 now state both bounds: same input 1e-9 on all columns; stored output 1e-9 for SMA and BB, 1e-6 for MACD and RSI. `openspec validate --strict` passes.
+- `cargo test -p ta-core --test indicators`: 8 passed (the 5 ported `indicators.test.ts` cases, plus three parity tests). `mise run verify`: exit 0.
