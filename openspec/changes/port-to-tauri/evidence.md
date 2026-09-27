@@ -236,3 +236,7 @@
   - a failed POST is sent exactly once;
   - a given client order id is kept;
   - all six status messages, network failure, and timeout.
+
+### 3.11 Order validation
+- `broker::validate`: `OrderForm` (the raw form text) with `validate`, which returns the spec messages in display order, and `to_request`, which trims and uppercases the symbol, sends qty *or* notional, adds only the price fields the type needs, and always sends `extended_hours`. Positive means it parses as a finite f64 greater than 0 after trimming, which matches JS `Number()` except for hex literals.
+- `cargo test -p ta-core --test order_validation`: 11 passed. That covers the 9 ported cases (stop-limit now asserts the exact two messages), plus the notional error and the stop-limit/trailing field selection. The qty cases also cover "", "-1", "abc", and "inf".
