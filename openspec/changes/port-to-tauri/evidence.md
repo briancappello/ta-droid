@@ -487,3 +487,21 @@
   - **a bar pushed through `/__control/push` (close 999.99) changes the header price to 999.99, and the last candle spikes to it** (`artifacts/g3/live-bar.png`);
   - switching to 5min moves the union to `AAPL/5Min/OHLCV` and drops `1Min`.
 - Unit coverage from 5.5: the live-bar price and push test, and the range change moving `subscribe_bars` to `1Min`.
+
+### 5.7 Positions and Orders
+- `ui/src/book.ts`: `tagAll` (flattens backend `AccountBook`s; an empty tag counts as Unattributed), `strategiesPresent`, `filterByStrategies`, `bucketByAccount`, `firstError`, and `usd` (`$1,234.00` / `-$5.10`).
+- `StrategyFilter`: the RN label and toggle rules (from All, one tap selects just that option; none or all selected collapses to All), as a checkbox modal.
+- `useBook`: loads on mount and on refresh. The router remounts a screen on each visit, which gives the RN refresh-on-focus.
+- `PositionsScreen`: per-account groups with a summed P/L colored by sign, the paper badge, `qty @ $avg`, market value, and P/L. A row opens the chart. The first account error shows as a banner. The no-accounts state shows "Add an account to start trading." with "Go to Accounts".
+- `OrdersScreen`: "N working", side and type, `size @ limit|stop`, and status.
+- Vitest (21 new; 84 total):
+  - `book` (5; the stub-tagger case is adapted to backend tags);
+  - `strategyFilter` (7 ported + a menu-interaction test);
+  - Positions (6): grouping and formatting, paper badge, no accounts, error banner, filter narrowing, refresh and chart navigation;
+  - Orders (2).
+- G3 `e2e/specs/book.e2e.ts`: 4 passing:
+  - both accounts' positions, including the MSFT short;
+  - **the fa-techan Momentum filter keeps only PA1TEST/AAPL**;
+  - **a 401 scripted on LV1TEST shows "Check the API keys for this account." while PA1TEST still renders**;
+  - the seeded AMD order "2 @ 100", "1 working".
+- Screenshots: `positions.png`, `positions-error.png`, `orders.png`.

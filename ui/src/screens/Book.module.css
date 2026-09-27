@@ -1,0 +1,12 @@
+.filterRow { padding: 8px 12px; }
+.bucket { border-bottom: 1px solid #2a2a4a; }
+.bucketHeader { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 12px 6px; background: #1c1c36; }
+.bucketName { font-weight: 700; }
+.bucketMeta { font-size: 13px; font-weight: 600; color: var(--muted); }
+.row { display: flex; justify-content: space-between; align-items: center; width: 100%; text-align: left; padding: 10px 12px; border-top: 1px solid #22314f; }
+.left, .right { display: flex; flex-direction: column; gap: 2px; }
+.right { align-items: flex-end; }
+.symbol { font-size: 15px; font-weight: 600; }
+.value { font-size: 15px; font-variant-numeric: tabular-nums; }
+.sub { font-size: 12px; color: #999; font-variant-numeric: tabular-nums; }
+.emptyBox { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 48px 24px; color: #8a97b0; }
