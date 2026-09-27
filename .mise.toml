@@ -85,6 +85,10 @@ depends = ["build:ui"]
 env = { TA_DROID_CONFIG = "config/app-config.e2e.toml", ALPINE_OUT = "{{config_root}}/artifacts/g5/pkg", ALPINE_FAST = "1" }
 run = ["packaging/build-alpine.sh x86_64", "e2e/run-pmos.sh"]
 
+[tasks."pmos:qa"]
+description = "Manual QA: the pmOS VM in a window, with fake-backends tunneled in (Ctrl-C stops it)"
+run = "e2e/pmos/qa.sh"
+
 [tasks.verify]
 description = "Desktop gates: G1-G3"
 depends = ["verify:core", "verify:ui", "e2e:desktop"]

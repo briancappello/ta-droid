@@ -11,12 +11,16 @@
 #   vm.sh status          print "running" or "stopped"
 #
 # State lives in ~/.local/share/ta-droid/pmos (image, OVMF vars, VM-only key).
+# PMOS_DISPLAY=gtk opens a window for manual QA (default: none, headless).
+# Stop a windowed VM with `vm.sh stop`: closing the window is a hard power-off.
 set -euo pipefail
 
 D="${PMOS_DIR:-$HOME/.local/share/ta-droid/pmos}"
 PORT="${PMOS_SSH_PORT:-2222}"
 USER_="${PMOS_USER:-pmos}"
 OVMF_CODE="${PMOS_OVMF_CODE:-/usr/share/edk2/x64/OVMF_CODE.4m.fd}"
+DISPLAY_OPT="${PMOS_DISPLAY:-none}"
+[[ $DISPLAY_OPT == gtk ]] && DISPLAY_OPT="gtk,zoom-to-fit=on"
 PIDFILE="$D/qemu.pid"
 SSH_OPTS=(-i "$D/id_ed25519" -o IdentitiesOnly=yes -o BatchMode=yes
   -o UserKnownHostsFile="$D/known_hosts" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5)
@@ -36,7 +40,7 @@ case "${1:-}" in
       -drive file="$D/qemu-amd64.img",format=raw,if=virtio \
       -netdev user,id=n0,hostfwd=tcp:127.0.0.1:"$PORT"-:22 -device virtio-net-pci,netdev=n0 \
       -device virtio-vga -device qemu-xhci -device usb-kbd -device usb-tablet \
-      -display none -serial file:"$D/serial.log" \
+      -display "$DISPLAY_OPT" -serial file:"$D/serial.log" \
       >"$D/qemu.out" 2>&1 </dev/null &
     echo $! >"$PIDFILE"
     for _ in $(seq 1 90); do
