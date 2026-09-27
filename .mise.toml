@@ -2,3 +2,8 @@
 java = "21"
 node = "22"
 pnpm = "latest"
+rust = { version = "1.96.0", components = "clippy,rustfmt", targets = "aarch64-linux-android,x86_64-linux-android,aarch64-unknown-linux-musl" }
+
+[env]
+ANDROID_HOME = "{{env.HOME}}/Android/Sdk"
+NDK_HOME = "{{env.HOME}}/Android/Sdk/ndk/27.1.12297006"

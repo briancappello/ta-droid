@@ -7,7 +7,7 @@ Tasks marked **Operator** need the human. They are grouped into the start batch 
 
 ## 1. Toolchain and baseline
 
-- [ ] 1.1 Create `feat/tauri-port`. Add Rust to `.mise.toml`, install the Rust targets `aarch64-linux-android` and `x86_64-linux-android`, and install the Tauri CLI and `tauri-driver`. Verify: the versions of each tool are recorded in `evidence.md`.
+- [x] 1.1 Create `feat/tauri-port`. Add Rust to `.mise.toml`, install the Rust targets `aarch64-linux-android` and `x86_64-linux-android`, and install the Tauri CLI and `tauri-driver`. Verify: the versions of each tool are recorded in `evidence.md`.
 - [ ] 1.2 Record the baseline: `pnpm test` pass, fail, and skip counts on the React Native code. Verify: the counts are in `evidence.md`.
 - [ ] 1.3 Commit a provisioning test vector: a blob and passphrase made by `scripts/encrypt-credentials.mjs` from dummy credentials, stored under `src-tauri/crates/provision/tests/fixtures/`. Verify: the Node script decrypts the fixture back to the dummy credentials.
 - [ ] 1.4 Scaffold the `src-tauri/` workspace (D2) and the Vite React TypeScript app in `ui/`, with identifier `com.briancappello.ta_droid` and a 412×915 development window. Verify: `cargo tauri build --debug` succeeds and the binary starts.
