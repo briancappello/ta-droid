@@ -17,6 +17,9 @@ mkdir -p "$RUN"
 # parallel it could replace the binary under test.
 export CARGO_TARGET_DIR="$ROOT/src-tauri/target/e2e"
 export TA_DROID_APP="$CARGO_TARGET_DIR/debug/ta-droid"
+# Fresh app data (secrets and preferences) for every run.
+export TA_DROID_DATA_DIR="$RUN/data"
+rm -rf "$TA_DROID_DATA_DIR"
 : "${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"
 export XDG_RUNTIME_DIR
 

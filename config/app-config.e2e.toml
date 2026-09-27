@@ -27,3 +27,12 @@ broker = "alpaca"
 id = "LV1TEST"
 name = "Live"
 is_paper = false
+
+# Test credentials (fake-backends accounts), passphrase in
+# e2e/fixtures/passphrase.txt. Made with:
+#   ta-provision encrypt <plaintext> --passphrase-file e2e/fixtures/passphrase.txt
+[credentials_blob]
+salt = "yYvQuepTO4lgdLEnNr1kwA=="
+nonce = "2btMFiPtA7RZyWO7iW4FMszepjG3siGe"
+ciphertext = "GQPXQ4S2wvb4L7z5RuJ0B0J8mmLTBHFP/2eWcyqbntbpRDnsdZQv+DuVeLM7Qvd+/OJZtpDSnGuzHMFshUTdYH/6sAVmUTV+O8dDS9OldkF0LJ2JH2wB5rmsETEfSIf1UQgIERpXWfrlsD6Vt9O0/bcazDSpgBd4fOVRkuUrc0T8hoFYaCMoju5wLYiGjMg8wjZVEPRcIm1S9ssUIaSGjv+gNnkOz4BqRgkjLiy8BgWEKm4sZp03VY03lWdOX7j3/HpYgK5CGxs9fQ3AH4NN6cXoObISG8ao7gAGPN9Rzr6T/Eo8IOZBC2lbfyHhIPkc0HlzXmeCoujiRJTGHqltdlH2iCskLzq4bayk8OsPNOkTvZBIPixOf3Ntdatq+GBPv5DgpNTVR2HEzlKYbtgpPVjI+dCFza8X0d9tIdhSPOOJ"
+fingerprint = "1a1afe109e7f6a33d71955bb140ed22aacdf7596a415c39f518114f3dd770a46"

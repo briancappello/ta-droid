@@ -359,3 +359,15 @@
   - `invoke('health')` over IPC still returns `{marketstore: up, fatechan: up}`.
 - Negative control: adding `http://127.0.0.1:8787` to `connect-src` made the block test fail (✖) while the IPC test passed. The config was restored afterwards.
 - `mise run e2e:desktop`: 3 passing across 2 spec files.
+
+### 4.5 Secret-leak guard
+- `src-tauri/src/leak_guard.rs` is active in `e2e` builds and compiles to a no-op otherwise.
+  - Every command result (success and error) and every channel message is serialized and checked against every provisioned value. It reads the e2e `FileStore` through `AppState::secret_dump`, takes broker `key`/`secret` fields from the JSON credentials, skips the fingerprint, and ignores values shorter than 6 characters.
+  - A hit replaces the result with the error "secret leak blocked in `<command>`", drops the channel message, and logs `SECRET-LEAK` without printing the value.
+  - All command adapters in `commands.rs` now go through `check`, and the channel sinks go through `allow`.
+- `config/app-config.e2e.toml` now ships a real test blob, made by `ta-provision encrypt` from the fake-backends accounts plus `e2e-auth` headers. The passphrase is in `e2e/fixtures/passphrase.txt`. `run-desktop.sh` gives each run a fresh `TA_DROID_DATA_DIR`.
+- e2e support (`e2e/support/app.ts`): `invoke()` returns results as JSON text, because WebKitWebDriver turned object rejections into "[object Object]" errors. Also `ensureProvisioned()` and the list of test `SECRETS`.
+- Negative control, as the task requires: a temporary e2e-only command `leak_probe` returned `key=<provisioned key>`. In G3 it came back as `{error: "secret leak blocked in `leak_probe`"}`, and the driver log had one `SECRET-LEAK` line (run log kept at `artifacts/g3/leak-probe-run.log`). The command and its spec were then removed; `rg leak_probe` finds nothing.
+- The permanent spec `e2e/specs/leak-guard.e2e.ts` provisions, then calls 10 read commands. Each succeeds, none trips the guard, and none contains a test secret.
+- Unit test `leak_guard::tests` finds a nested leak and passes a clean value.
+- `mise run verify`: exit 0, G3 4 passing across 3 spec files. Section 4 is complete.

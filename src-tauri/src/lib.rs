@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod leak_guard;
 pub mod state;
 mod stores;
 pub mod trading;
@@ -18,11 +19,12 @@ pub fn run() {
     ta_core::net::install_default_crypto_provider();
     tauri::Builder::default()
         .setup(|app| {
-            let (secrets, prefs) = stores::open(app.handle())?;
-            let state = tauri::async_runtime::block_on(async {
-                state::AppState::new(app_config(), secrets, prefs)
+            let stores = stores::open(app.handle())?;
+            let mut state = tauri::async_runtime::block_on(async {
+                state::AppState::new(app_config(), stores.secrets, stores.prefs)
             })
             .map_err(|e| e.message)?;
+            state.secret_dump = stores.dump;
             app.manage(state);
             Ok(())
         })

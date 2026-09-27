@@ -1,6 +1,11 @@
 //! Tauri commands: thin adapters over `AppState`. Nothing here returns a key,
 //! secret, header value, or passphrase (app-shell spec: secret boundary).
+//! In `e2e` builds every result and channel message also passes the leak
+//! guard.
 
+use ta_core::broker::Order;
+use ta_core::broker::flatten::{Leg, SubmitOutcome};
+use ta_core::broker::validate::{self, OrderForm};
 use ta_core::marketstore::{History, Quote};
 use ta_core::profiles::HealthReport;
 use ta_core::stream::LiveBar;
@@ -9,36 +14,41 @@ use ta_provision::flow::Outcome;
 use tauri::State;
 use tauri::ipc::Channel;
 
-use ta_core::broker::Order;
-use ta_core::broker::flatten::{Leg, SubmitOutcome};
-use ta_core::broker::validate::{self, OrderForm};
-
+use crate::leak_guard::{allow, check, secret_values};
 use crate::state::{AccountsView, AppState, CmdResult, ProfilesView, ProvisioningStatus};
 use crate::trading::{HoldingView, OrdersBook, PositionsBook};
 
 #[tauri::command]
-pub fn provisioning_status(state: State<'_, AppState>) -> ProvisioningStatus {
-    state.provisioning_status()
+pub fn provisioning_status(state: State<'_, AppState>) -> CmdResult<ProvisioningStatus> {
+    check(
+        &state,
+        "provisioning_status",
+        Ok(state.provisioning_status()),
+    )
 }
 
 #[tauri::command]
 pub async fn provision(state: State<'_, AppState>, passphrase: String) -> CmdResult<Outcome> {
-    state.provision(passphrase).await
+    let r = state.provision(passphrase).await;
+    check(&state, "provision", r)
 }
 
 #[tauri::command]
 pub async fn list_accounts(state: State<'_, AppState>) -> CmdResult<AccountsView> {
-    Ok(state.accounts().await)
+    let r = Ok(state.accounts().await);
+    check(&state, "list_accounts", r)
 }
 
 #[tauri::command]
 pub async fn set_active_account(state: State<'_, AppState>, id: String) -> CmdResult<AccountsView> {
-    state.set_active_account(&id).await
+    let r = state.set_active_account(&id).await;
+    check(&state, "set_active_account", r)
 }
 
 #[tauri::command]
 pub async fn list_profiles(state: State<'_, AppState>) -> CmdResult<ProfilesView> {
-    Ok(state.profiles().await)
+    let r = Ok(state.profiles().await);
+    check(&state, "list_profiles", r)
 }
 
 #[tauri::command]
@@ -46,12 +56,14 @@ pub async fn set_active_profile(
     state: State<'_, AppState>,
     name: String,
 ) -> CmdResult<ProfilesView> {
-    state.set_active_profile(&name).await
+    let r = state.set_active_profile(&name).await;
+    check(&state, "set_active_profile", r)
 }
 
 #[tauri::command]
 pub async fn health(state: State<'_, AppState>) -> CmdResult<HealthReport> {
-    Ok(state.health().await)
+    let r = Ok(state.health().await);
+    check(&state, "health", r)
 }
 
 #[tauri::command]
@@ -61,22 +73,26 @@ pub async fn history(
     freq: String,
     limit: Option<usize>,
 ) -> CmdResult<History> {
-    state.history(&symbol, &freq, limit).await
+    let r = state.history(&symbol, &freq, limit).await;
+    check(&state, "history", r)
 }
 
 #[tauri::command]
 pub async fn quotes(state: State<'_, AppState>, symbols: Vec<String>) -> CmdResult<Vec<Quote>> {
-    state.quotes(&symbols).await
+    let r = state.quotes(&symbols).await;
+    check(&state, "quotes", r)
 }
 
 #[tauri::command]
 pub async fn watchlists(state: State<'_, AppState>) -> CmdResult<Vec<WatchlistRef>> {
-    state.watchlists().await
+    let r = state.watchlists().await;
+    check(&state, "watchlists", r)
 }
 
 #[tauri::command]
 pub async fn watchlist_entries(state: State<'_, AppState>, id: String) -> CmdResult<Vec<WatchRow>> {
-    state.watchlist_entries(&id).await
+    let r = state.watchlist_entries(&id).await;
+    check(&state, "watchlist_entries", r)
 }
 
 /// Live bars for `symbol` at a MarketStore timeframe. Returns an id for
@@ -88,8 +104,11 @@ pub async fn subscribe_bars(
     timeframe: String,
     on_bar: Channel<LiveBar>,
 ) -> CmdResult<u64> {
+    let secrets = secret_values(&state);
     Ok(state
-        .subscribe_bars(&symbol, &timeframe, move |b| on_bar.send(b).is_ok())
+        .subscribe_bars(&symbol, &timeframe, move |b| {
+            !allow(&secrets, "bars", &b) || on_bar.send(b).is_ok()
+        })
         .await)
 }
 
@@ -99,8 +118,11 @@ pub async fn subscribe_watchlist(
     id: String,
     on_rows: Channel<Vec<WatchRow>>,
 ) -> CmdResult<u64> {
+    let secrets = secret_values(&state);
     Ok(state
-        .subscribe_watchlist(&id, move |rows| on_rows.send(rows).is_ok())
+        .subscribe_watchlist(&id, move |rows| {
+            !allow(&secrets, "watchlist", &rows) || on_rows.send(rows).is_ok()
+        })
         .await)
 }
 
@@ -111,12 +133,14 @@ pub fn unsubscribe(state: State<'_, AppState>, id: u64) {
 
 #[tauri::command]
 pub async fn positions(state: State<'_, AppState>) -> CmdResult<PositionsBook> {
-    Ok(state.positions().await)
+    let r = Ok(state.positions().await);
+    check(&state, "positions", r)
 }
 
 #[tauri::command]
 pub async fn orders(state: State<'_, AppState>) -> CmdResult<OrdersBook> {
-    Ok(state.orders().await)
+    let r = Ok(state.orders().await);
+    check(&state, "orders", r)
 }
 
 #[tauri::command]
@@ -124,7 +148,8 @@ pub async fn symbol_holdings(
     state: State<'_, AppState>,
     symbol: String,
 ) -> CmdResult<Vec<HoldingView>> {
-    Ok(state.symbol_holdings(&symbol).await)
+    let r = Ok(state.symbol_holdings(&symbol).await);
+    check(&state, "symbol_holdings", r)
 }
 
 /// Live form feedback; the same checks run again in `place_order`.
@@ -142,12 +167,14 @@ pub async fn place_order(
     account_id: String,
     form: OrderForm,
 ) -> CmdResult<Order> {
-    state.place_order(&account_id, &form).await
+    let r = state.place_order(&account_id, &form).await;
+    check(&state, "place_order", r)
 }
 
 #[tauri::command]
 pub async fn flatten_legs(state: State<'_, AppState>, symbol: String) -> CmdResult<Vec<Leg>> {
-    Ok(state.flatten_legs(&symbol).await)
+    let r = Ok(state.flatten_legs(&symbol).await);
+    check(&state, "flatten_legs", r)
 }
 
 #[tauri::command]
@@ -155,5 +182,6 @@ pub async fn submit_flatten(
     state: State<'_, AppState>,
     legs: Vec<Leg>,
 ) -> CmdResult<SubmitOutcome> {
-    Ok(state.submit_flatten(legs).await)
+    let r = Ok(state.submit_flatten(legs).await);
+    check(&state, "submit_flatten", r)
 }

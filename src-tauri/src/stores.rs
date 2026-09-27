@@ -36,31 +36,49 @@ fn data_dir(app: &AppHandle) -> Result<PathBuf, Box<dyn std::error::Error>> {
     Ok(app.path().app_data_dir()?)
 }
 
-pub fn open(app: &AppHandle) -> Result<(SharedStore, SharedStore), Box<dyn std::error::Error>> {
+pub struct Stores {
+    pub secrets: SharedStore,
+    pub prefs: SharedStore,
+    /// e2e builds: lists the secrets for the leak guard.
+    pub dump: Option<crate::state::SecretDump>,
+}
+
+pub fn open(app: &AppHandle) -> Result<Stores, Box<dyn std::error::Error>> {
     let dir = data_dir(app)?;
     let prefs: SharedStore = Arc::new(FileStore::new(dir.join("prefs.json")));
-    Ok((secrets(&dir), prefs))
+    let (secrets, dump) = secrets(&dir);
+    Ok(Stores {
+        secrets,
+        prefs,
+        dump,
+    })
 }
 
 #[cfg(feature = "e2e")]
-fn secrets(dir: &std::path::Path) -> SharedStore {
+fn secrets(dir: &std::path::Path) -> (SharedStore, Option<crate::state::SecretDump>) {
     // No Secret Service in headless e2e sessions; test values only.
-    Arc::new(FileStore::new(dir.join("e2e-secrets.json")))
+    let store = Arc::new(FileStore::new(dir.join("e2e-secrets.json")));
+    let dump_store = store.clone();
+    (store, Some(Arc::new(move || dump_store.entries())))
 }
 
 #[cfg(all(not(feature = "e2e"), target_os = "linux", not(target_os = "android")))]
-fn secrets(_: &std::path::Path) -> SharedStore {
-    match ta_core::store::KeyringStore::secret_service(SERVICE) {
+fn secrets(_: &std::path::Path) -> (SharedStore, Option<crate::state::SecretDump>) {
+    let store: SharedStore = match ta_core::store::KeyringStore::secret_service(SERVICE) {
         Ok(s) => Arc::new(s),
         Err(e) => Arc::new(Unavailable(e.to_string())),
-    }
+    };
+    (store, None)
 }
 
 #[cfg(all(
     not(feature = "e2e"),
     not(all(target_os = "linux", not(target_os = "android")))
 ))]
-fn secrets(_: &std::path::Path) -> SharedStore {
+fn secrets(_: &std::path::Path) -> (SharedStore, Option<crate::state::SecretDump>) {
     // The Android Keystore store arrives in task 6.3.
-    Arc::new(Unavailable("no secret store on this platform yet".into()))
+    (
+        Arc::new(Unavailable("no secret store on this platform yet".into())),
+        None,
+    )
 }

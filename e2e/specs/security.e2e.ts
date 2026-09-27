@@ -1,4 +1,5 @@
 import { browser, expect } from '@wdio/globals';
+import { invoke } from '../support/app.ts';
 
 // app-shell spec: secret boundary. The WebView may talk only to the backend
 // over IPC; any direct network request from UI code is blocked by the CSP.
@@ -24,12 +25,6 @@ describe('security', () => {
   });
 
   it('still reaches the backend over IPC', async () => {
-    const health = await browser.executeAsync((done: (r: unknown) => void) => {
-      const internals = (window as unknown as {
-        __TAURI_INTERNALS__: { invoke: (cmd: string) => Promise<unknown> };
-      }).__TAURI_INTERNALS__;
-      internals.invoke('health').then(done, (e: unknown) => done({ error: String(e) }));
-    });
-    expect(health).toEqual({ marketstore: 'up', fatechan: 'up' });
+    expect(await invoke('health')).toEqual({ marketstore: 'up', fatechan: 'up' });
   });
 });

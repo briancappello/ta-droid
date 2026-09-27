@@ -97,7 +97,12 @@ pub struct Live {
     pub alpaca: Alpaca,
 }
 
+/// Lists every secret entry (e2e builds only).
+pub type SecretDump = Arc<dyn Fn() -> Vec<(String, String)> + Send + Sync>;
+
 pub struct AppState {
+    /// Set in e2e builds so the leak guard knows what to look for.
+    pub secret_dump: Option<SecretDump>,
     pub config: AppConfig,
     pub secrets: SharedStore,
     pub prefs: SharedStore,
@@ -143,7 +148,14 @@ impl AppState {
             prefs,
             subs: Arc::default(),
             next_sub: AtomicU64::new(1),
+            secret_dump: None,
         })
+    }
+
+    /// Every (key, value) in the secret store, for the e2e leak guard.
+    /// Only the file-backed e2e store can enumerate; other stores give none.
+    pub fn secret_entries(&self) -> Vec<(String, String)> {
+        self.secret_dump.as_ref().map(|f| f()).unwrap_or_default()
     }
 
     pub fn provisioning_status(&self) -> ProvisioningStatus {

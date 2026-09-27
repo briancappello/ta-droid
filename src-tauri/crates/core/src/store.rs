@@ -37,6 +37,18 @@ pub struct MemoryStore {
     map: Mutex<BTreeMap<String, String>>,
 }
 
+impl MemoryStore {
+    /// Every entry (tests and the e2e leak guard).
+    pub fn entries(&self) -> Vec<(String, String)> {
+        self.map
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect()
+    }
+}
+
 impl KvStore for MemoryStore {
     fn get(&self, key: &str) -> Result<Option<String>, StoreError> {
         Ok(self.map.lock().unwrap().get(key).cloned())
@@ -63,6 +75,14 @@ impl FileStore {
             path: path.into(),
             lock: Mutex::new(()),
         }
+    }
+
+    /// Every entry (the e2e leak guard). An unreadable file gives none.
+    pub fn entries(&self) -> Vec<(String, String)> {
+        let _g = self.lock.lock().unwrap();
+        self.load()
+            .map(|m| m.into_iter().collect())
+            .unwrap_or_default()
     }
 
     fn load(&self) -> Result<BTreeMap<String, String>, StoreError> {
