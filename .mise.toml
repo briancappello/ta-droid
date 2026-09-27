@@ -23,6 +23,12 @@ dir = "ui"
 depends = ["setup:ui"]
 run = "pnpm exec vite build"
 
+[tasks.dev]
+description = "Run the app on the desktop with hot reload (config/app-config.toml, else the example)"
+dir = "src-tauri"
+depends = ["setup:ui"]
+run = "cargo tauri dev"
+
 [tasks."verify:core"]
 description = "G1: Rust format, lint, and tests"
 dir = "src-tauri"
