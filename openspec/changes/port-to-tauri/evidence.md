@@ -102,3 +102,11 @@
   - MACD lookback 33 with hist = macd − signal, and RSI lookback 14 with values in range;
   - invalid period is an error.
 - `mise run verify`: exit 0.
+
+## 3. Rust core
+
+### 3.1 Build-time config
+- New crate `ta-core` (`src-tauri/crates/core`) with a `config` module. `AppConfig::parse` handles accounts, profiles (`name`, `marketstore_url`, `fatechan_url`, `auth_headers`, optional `ca_cert_pem`), broker host overrides with production defaults, and the optional `credentials_blob`. Accounts and the blob are lenient, like the RN app. Profiles are required and must be unique.
+- `config/app-config.example.toml` (a `local` profile at 127.0.0.1:5993 and :8000, with the other profiles commented) and `config/app-config.e2e.toml` (the `e2e` and `e2e-auth` profiles, Alpaca hosts, and two test accounts, all on fake-backends :8787) are committed. `config/app-config.toml` is gitignored.
+- The app's `build.rs` selects the config in this order: `TA_DROID_CONFIG`, then the e2e config with `--features e2e`, then `app-config.toml`, then the example. It validates the file with `ta-core` and embeds it through `OUT_DIR`. An invalid file fails the build: `TA_DROID_CONFIG=bad.toml cargo check` gives "invalid app config …: app config defines no backend profiles".
+- `cargo test -p ta-core`: 5 passed (valid config; malformed accounts give an empty list; a missing or malformed blob gives `None`; default broker hosts; profiles required and unique). The app test `embedded_config_parses` passes, including under `--all-features` (the e2e profile comes first). `mise run verify`: exit 0.

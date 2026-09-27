@@ -1,0 +1,29 @@
+# Embedded by `--features e2e` builds. Everything points at fake-backends on
+# 127.0.0.1:8787 (on Android through `adb reverse`). Test values only.
+
+[[profiles]]
+name = "e2e"
+marketstore_url = "http://127.0.0.1:8787/marketstore"
+fatechan_url = "http://127.0.0.1:8787/fatechan"
+
+[[profiles]]
+name = "e2e-auth"
+marketstore_url = "http://127.0.0.1:8787/marketstore"
+fatechan_url = "http://127.0.0.1:8787/fatechan"
+auth_headers = ["CF-Access-Client-Id", "CF-Access-Client-Secret"]
+
+[brokers.alpaca]
+paper = "http://127.0.0.1:8787/alpaca"
+live = "http://127.0.0.1:8787/alpaca"
+
+[[accounts]]
+broker = "alpaca"
+id = "PA1TEST"
+name = "Paper"
+is_paper = true
+
+[[accounts]]
+broker = "alpaca"
+id = "LV1TEST"
+name = "Live"
+is_paper = false

@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "crates/fake-backends", "crates/talib-sys"]
+members = [".", "crates/fake-backends", "crates/talib-sys", "crates/core"]
 resolver = "3"
 
 [workspace.package]
@@ -28,9 +28,11 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+ta-core = { path = "crates/core" }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+ta-core = { path = "crates/core" }
 serde.workspace = true
 serde_json.workspace = true
 

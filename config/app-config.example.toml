@@ -1,0 +1,45 @@
+# ta-droid build-time configuration (openspec port-to-tauri, design D8).
+#
+# Copy to config/app-config.toml (git-ignored) and edit. The build embeds that
+# file; without it, the build embeds this example. Nothing here is secret:
+# credentials and backend auth header values are provisioned from the
+# encrypted blob into the platform secret store.
+
+# Backend profiles. The first one is active until the user picks another.
+[[profiles]]
+name = "local"
+marketstore_url = "http://127.0.0.1:5993"
+fatechan_url = "http://127.0.0.1:8000"
+
+# [[profiles]]
+# name = "taichi"
+# marketstore_url = "https://marketstore.lab"
+# fatechan_url = "https://fa-techan.lab"
+# # Private CA for *.lab, PEM:
+# ca_cert_pem = """
+# -----BEGIN CERTIFICATE-----
+# ...
+# -----END CERTIFICATE-----
+# """
+
+# [[profiles]]
+# name = "remote"
+# marketstore_url = "https://marketstore.example.com"
+# fatechan_url = "https://fa-techan.example.com"
+# # Values come from the blob's `backends.remote` section.
+# auth_headers = ["CF-Access-Client-Id", "CF-Access-Client-Secret"]
+
+# Broker accounts. `id` is the broker's account number. An account is usable
+# only once its credentials are provisioned.
+# [[accounts]]
+# broker = "alpaca"
+# id = "PA1"
+# name = "Paper"
+# is_paper = true
+
+# Encrypted credentials blob, as printed by `ta-provision encrypt`.
+# [credentials_blob]
+# salt = "..."
+# nonce = "..."
+# ciphertext = "..."
+# fingerprint = "..."

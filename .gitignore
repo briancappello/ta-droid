@@ -77,3 +77,6 @@ bun.lockb
 
 # Tauri port: end-to-end screenshots and logs
 /artifacts/
+
+# Tauri port: the real build config (accounts, profiles, blob)
+/config/app-config.toml
