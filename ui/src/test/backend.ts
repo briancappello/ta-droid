@@ -1,0 +1,28 @@
+// Test double for the Rust backend: route `invoke` calls to handlers.
+import { mockIPC } from '@tauri-apps/api/mocks';
+
+export type Handlers = Record<string, (args: Record<string, unknown>) => unknown>;
+
+/** Defaults for a provisioned app with healthy backends and no data. */
+export const baseHandlers: Handlers = {
+  provisioning_status: () => ({ needed: false }),
+  list_accounts: () => ({ accounts: [], active_id: null }),
+  health: () => ({ marketstore: 'up', fatechan: 'up' }),
+  list_profiles: () => ({ profiles: [], active: 'e2e' }),
+  watchlists: () => [],
+  unsubscribe: () => null,
+};
+
+/** Install handlers; returns the list of calls made, for assertions. */
+export function mockBackend(handlers: Handlers = {}): { cmd: string; args: Record<string, unknown> }[] {
+  const calls: { cmd: string; args: Record<string, unknown> }[] = [];
+  const all = { ...baseHandlers, ...handlers };
+  mockIPC((cmd, payload) => {
+    const args = (payload ?? {}) as Record<string, unknown>;
+    calls.push({ cmd, args });
+    const h = all[cmd];
+    if (!h) throw new Error(`unmocked command ${cmd}`);
+    return h(args);
+  });
+  return calls;
+}

@@ -50,7 +50,7 @@ Port each React Native test to Rust with the same cases. The source test files a
 
 Port each React Native component test to vitest with the same cases. The source test files are named in brackets. Each screen task also adds its end-to-end spec to the shared suite and must pass G3. G4 runs the same specs in section 6.
 
-- [ ] 5.1 Build the app shell: the router, drawer, and stacks; the header with the MS/FA pill; safe areas; and in-app back navigation through history. Verify: the vitest cases pass, and an end-to-end spec opens every drawer item and goes back through history on G3 [`appHeader`, `App`].
+- [x] 5.1 Build the app shell: the router, drawer, and stacks; the header with the MS/FA pill; safe areas; and in-app back navigation through history. Verify: the vitest cases pass, and an end-to-end spec opens every drawer item and goes back through history on G3 [`appHeader`, `App`].
 - [ ] 5.2 Build the provisioning gate: the prompt, the busy state while Argon2 runs, and the two failure messages. Verify: an end-to-end spec provisions with the right passphrase and then restarts without a prompt, and a wrong passphrase shows "Incorrect passphrase.".
 - [ ] 5.3 Build Settings, Accounts, and the Backend profile picker. Verify: the ported cases pass, and an end-to-end spec switches profile, restarts, and still has the new profile [`settingsScreen`, `accountsScreen`, `accountPicker`].
 - [ ] 5.4 Build the Watchlists screen with streaming updates. Verify: the ported cases pass, and an end-to-end spec shows rows replaced after a `watchlist_update` from `fake-backends` [`watchlistsScreen`, `format`].

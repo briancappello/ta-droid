@@ -1,0 +1,23 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(10px + var(--safe-top)) 12px 10px;
+  background: var(--bg);
+  flex: none;
+}
+.menu { font-size: 22px; line-height: 1; min-width: 32px; min-height: 32px; }
+.title { flex: 1; font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 3px 8px;
+}
+.chip:disabled { cursor: default; }
+.dot { width: 7px; height: 7px; border-radius: 4px; }
+.chipText { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
+.refresh { color: var(--accent); font-size: 18px; min-width: 28px; min-height: 28px; }

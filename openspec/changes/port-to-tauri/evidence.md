@@ -371,3 +371,28 @@
 - The permanent spec `e2e/specs/leak-guard.e2e.ts` provisions, then calls 10 read commands. Each succeeds, none trips the guard, and none contains a test secret.
 - Unit test `leak_guard::tests` finds a nested leak and passes a clean value.
 - `mise run verify`: exit 0, G3 4 passing across 3 spec files. Section 4 is complete.
+
+## 5. UI
+
+### 5.1 App shell
+- `ui/src/ipc.ts`: the only I/O path.
+  - A typed `api` (every command, using the generated bindings) and `errorMessage`.
+  - `live.bars` and `live.watchlist` wrap Tauri `Channel`s and return an idempotent unsubscribe that also works before the subscribe call resolves.
+- State:
+  - `state/backend.tsx`: health defaults to unknown, `setHealth`, `refresh`, and a 20 s poll.
+  - `state/accounts.tsx`: provisioning status checking → need-passphrase / ready; accounts; active id with fire-and-forget persist; `provision`.
+- Shell:
+  - `components/Shell.tsx`: the drawer (Chart, Positions, Orders, Watchlists, Settings) with a scrim.
+  - `components/Screen.tsx`: the drawer-screen header and the pushed-screen back bar.
+  - `components/AppHeader.tsx`: menu, title, actions, the MS/FA pill (disabled without a handler), and refresh.
+  - Safe areas use CSS `env(safe-area-inset-*)` with `viewport-fit=cover`.
+- `routes.tsx` sets up a memory router: default `/watchlists`, `/chart` → `/chart/AMD`, the chart stack (`order`, `exit`), and the settings stack (`accounts`, `backend`). Screens are placeholders until 5.2–5.9.
+- Vitest runs with `mockIPC` (`src/test/backend.ts`). It has 14 tests:
+  - ported `appHeader` (2) + a disabled pill with no refresh;
+  - ported `backendContext` (4) + a 20 s poll test with fake timers;
+  - `App`: opens on Watchlists, the drawer lists 5 items and navigates, the scrim closes it, the chart stack goes back, the pill opens Backend, and the gate hides the app.
+- G3 `e2e/specs/shell.e2e.ts`: 4 passing — opens on Watchlists, reaches every drawer destination, pushes and pops both stacks, and live MS/FA `up` with the pill opening Backend. Screenshots are `artifacts/g3/shell-*.png`.
+  - Gotcha: the scrim's center lies under the drawer, so WebDriver reported "element click intercepted". The spec taps the scrim's uncovered edge.
+  - `E2E_SPEC=./specs/x.e2e.ts` runs a single spec.
+- The Android back button moved to 6.7 with the rest of the mobile work. The lint rule `react-hooks/set-state-in-effect` is disabled on the poll line only, with the reason given.
+- `mise run verify`: exit 0.

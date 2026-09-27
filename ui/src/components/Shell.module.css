@@ -1,0 +1,18 @@
+.shell { position: relative; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.screen { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 10; }
+.drawer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(78%, 300px);
+  background: var(--panel);
+  z-index: 11;
+  padding: calc(24px + var(--safe-top)) 0 var(--safe-bottom);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.4);
+}
+.item { text-align: left; padding: 14px 20px; color: #ccc; font-size: 16px; }
+.active { color: var(--accent); font-weight: 600; background: rgba(33, 150, 243, 0.08); }

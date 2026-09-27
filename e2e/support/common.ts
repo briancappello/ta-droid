@@ -11,7 +11,7 @@ export function artifactsDir(gate: string): string {
 
 /** Settings shared by every platform config. Only the connection differs. */
 export const shared: Partial<Options.Testrunner> = {
-  specs: ['./specs/**/*.e2e.ts'],
+  specs: [process.env.E2E_SPEC ?? './specs/**/*.e2e.ts'],
   maxInstances: 1,
   framework: 'mocha',
   reporters: ['spec'],

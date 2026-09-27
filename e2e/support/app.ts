@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { browser } from '@wdio/globals';
+import { $, browser } from '@wdio/globals';
 
 /** The e2e blob's passphrase (config/app-config.e2e.toml). */
 export const PASSPHRASE = fs
@@ -47,4 +47,11 @@ export async function ensureProvisioned(): Promise<void> {
     const r = await invoke<{ outcome: string }>('provision', { passphrase: PASSPHRASE });
     if (r.outcome !== 'ok') throw new Error(`provisioning failed: ${JSON.stringify(r)}`);
   }
+}
+
+/** Provision if needed, then reload so the UI mounts past the gate. */
+export async function openProvisionedApp(): Promise<void> {
+  await ensureProvisioned();
+  await browser.refresh();
+  await $('[data-testid="app-root"]').waitForExist();
 }

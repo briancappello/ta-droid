@@ -9,5 +9,10 @@ export default defineConfig({
   server: { port: 5173, strictPort: true, host: process.env.TAURI_DEV_HOST || false },
   envPrefix: ['VITE_', 'TAURI_ENV_'],
   build: { target: 'es2022', sourcemap: !!process.env.TAURI_ENV_DEBUG },
-  test: { environment: 'jsdom', include: ['src/**/*.test.{ts,tsx}'] },
+  test: {
+    environment: 'jsdom',
+    include: ['src/**/*.test.{ts,tsx}'],
+    setupFiles: ['src/test/setup.ts'],
+    css: { modules: { classNameStrategy: 'non-scoped' } },
+  },
 });
