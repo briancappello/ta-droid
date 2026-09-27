@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=ta-droid
+Comment=Charts, watchlists, and paper trading
+Exec=ta-droid
+Icon=com.briancappello.ta-droid
+Terminal=false
+Categories=Office;Finance;
+StartupWMClass=ta-droid
+# Phosh lists only apps that declare a mobile form factor.
+X-Purism-FormFactor=Workstation;Mobile;

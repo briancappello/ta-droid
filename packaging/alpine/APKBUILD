@@ -1,0 +1,23 @@
+# Packages the musl build from packaging/build-alpine.sh for postmarketOS
+# (task 7.2). The binary is compiled first with the pinned toolchain, and
+# this APKBUILD only installs it, so it suits sideloading, not aports.
+pkgname=ta-droid
+pkgver=0.1.0
+pkgrel=0
+pkgdesc="Charts, watchlists, and paper trading"
+url="https://github.com/briancappello/ta-droid"
+arch="x86_64 aarch64"
+license="Proprietary"
+# The WebKitGTK runtime, and a Secret Service provider for the credentials.
+depends="webkit2gtk-4.1 gtk+3.0 gnome-keyring"
+options="!check !strip"
+source="ta-droid com.briancappello.ta-droid.desktop com.briancappello.ta-droid.png"
+
+package() {
+	install -Dm755 "$srcdir"/ta-droid "$pkgdir"/usr/bin/ta-droid
+	install -Dm644 "$srcdir"/com.briancappello.ta-droid.desktop \
+		"$pkgdir"/usr/share/applications/com.briancappello.ta-droid.desktop
+	install -Dm644 "$srcdir"/com.briancappello.ta-droid.png \
+		"$pkgdir"/usr/share/icons/hicolor/128x128/apps/com.briancappello.ta-droid.png
+}
+# sha512sums are appended by `abuild checksum` in packaging/build-alpine.sh.
