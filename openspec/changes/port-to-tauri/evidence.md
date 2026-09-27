@@ -251,3 +251,12 @@
 - `cargo test -p ta-core --test flatten`: 4 passed:
   - ported: the plan's side and qty, holdings isolating a failing account, per-leg results, all-ok with no `suppressed`;
   - new: 3 legs with 1 failing, then a retry of `remaining`, makes **4 POSTs in total (only the failed leg resent)**, and the retry carries the same `client_order_id`.
+
+### 3.13 fa-techan and strategy tags
+- `ta_core::techan`: `strategy_positions` (`GET /strategies/positions` on the active profile, sent with the profile headers only, never broker credentials, 10 s timeout) returns `[]` on any failure. `Tagger` joins on the case-sensitive `broker:account_id:symbol`; anything unmatched is "Unattributed".
+- Grouping and filtering (`book.ts`: strategies present, filter, group by account) is view state, so it stays TypeScript in the UI and its tests are ported in 5.7.
+- `cargo test -p ta-core --test techan`: 3 passed:
+  - rows returned;
+  - **500, malformed JSON, wrong shape, connection refused, and timeout (50 ms) each give `[]`**;
+  - the tagger by broker, account, and symbol, including a case mismatch and an empty tagger.
+- The ported `pingHealth` case is covered by 3.6.

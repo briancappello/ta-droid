@@ -11,4 +11,5 @@ pub mod net;
 pub mod profiles;
 pub mod store;
 pub mod stream;
+pub mod techan;
 pub mod watchlists;
