@@ -10,7 +10,7 @@ The app SHALL build from one codebase and run on:
 - Linux on aarch64 and x86_64, both glibc (Droidian, desktop) and musl (postmarketOS);
 - the Phosh and Plasma Mobile shells.
 
-Its application identifier SHALL be `com.briancappello.ta_droid` on every platform.
+Its Android application id SHALL be `com.briancappello.ta_droid`. On Linux its application identifier (desktop entry and package metadata) SHALL be `com.briancappello.ta-droid`.
 
 #### Scenario: Android install
 - **WHEN** the Android package is installed on an Android 7.0 or later device

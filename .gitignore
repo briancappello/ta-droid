@@ -74,3 +74,6 @@ bun.lockb
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Tauri port: end-to-end screenshots and logs
+/artifacts/

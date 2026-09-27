@@ -9,7 +9,7 @@ There is no backwards compatibility requirement. Nothing is published, and no st
 ## What Changes
 
 - **BREAKING: new application shell.** Tauri v2 replaces React Native. The UI is React with TypeScript, rendered to the DOM. The backend is Rust. One codebase builds for Android (arm64 and x86_64) and Linux (aarch64 and x86_64).
-- **BREAKING: new application identifier.** `com.briancappello.ta_droid` replaces `com.fincharts`.
+- **BREAKING: new application identifier.** `com.briancappello.ta_droid` replaces `com.fincharts` on Android. Tauri rejects underscores in identifiers, so the Tauri and Linux identifier is `com.briancappello.ta-droid`, which Tauri maps to the Android package name.
 - **Rust owns all I/O.** Broker (Alpaca), MarketStore REST and WebSocket, fa-techan, the secret store, and provisioning move to Rust. The UI calls typed commands and receives data. It never receives a key, a secret, or an auth token.
 - **Indicators come from TA-Lib.** fa-techan uses TA-Lib, and the app now links the same C library. This replaces the `trading-signals` approximation, so the app matches fa-techan exactly instead of within a tolerance.
 - **BREAKING: backend profiles replace build-time URLs.** A profile holds the MarketStore URL, the fa-techan URL, and optional auth headers. The user selects the active profile at runtime, and the selection persists. Planned profiles:

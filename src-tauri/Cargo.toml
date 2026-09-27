@@ -1,0 +1,44 @@
+[workspace]
+members = ["."]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.96"
+license = "UNLICENSED"
+publish = false
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+
+[package]
+name = "ta-droid"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "ta_droid_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde.workspace = true
+serde_json.workspace = true
+
+[features]
+# Compiles in the e2e backend profile and the file-backed secret store.
+e2e = []
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

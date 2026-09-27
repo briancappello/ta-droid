@@ -27,3 +27,10 @@
 - `src-tauri/crates/provision/tests/fixtures/`: `node-blob.json`, `node-plaintext.json`, `node-passphrase.txt`, and the generator `make-node-vector.mjs`, which calls `scripts/encrypt-credentials.mjs`.
 - The plaintext already uses the new format (`credentials` plus `backends`) with dummy values. The Node encryptor stringifies any JSON value, so the vector covers the format the Rust side will read.
 - Check (libsodium-wrappers-sumo, separate script): plaintext match `true`, fingerprint `sha256(ciphertext base64)` match `true`, `OPSLIMIT_MODERATE=3`, `MEMLIMIT_MODERATE=268435456`.
+
+### 1.4 Scaffold
+- Identifier: Tauri's config check rejects `_` ("only alphanumeric characters, hyphens, and periods"). tauri-cli 2.12.0 derives the Android package with `identifier.replace('-', "_")` (`src/mobile/mod.rs:603`), so `tauri.conf.json` uses `com.briancappello.ta-droid` and Android gets `com.briancappello.ta_droid`. The proposal and the app-shell spec now say this. Task 2.3 confirms the Android side.
+- `ui/`: its own pnpm root (`ui/pnpm-workspace.yaml`), with Vite 8.3.1, React 19.3.0, TypeScript 6.0.3 (typescript-eslint 8.70 does not support TS 7), vitest 5.0.2, and lightweight-charts pinned at 4.2.3. `pnpm typecheck`, `pnpm lint`, `pnpm test` (1 passed), and `vite build` all pass.
+- `src-tauri/`: a workspace whose root is the app crate `ta-droid` (lib `ta_droid_lib`, mobile entry point), with tauri 2 and an `e2e` feature. The CSP is set as in D10, and the capability allows only `core:default`. Icons come from `icons/source.svg` via `cargo tauri icon`; the iOS and Windows store icons were removed.
+- Root React Native tooling ignores `ui/`, `e2e/`, and `src-tauri/` (jest `testPathIgnorePatterns`, the tsconfig `exclude`, `.eslintignore`). jest lists only `__tests__/`, and the root `tsc` passes. The root lint gives 0 errors and 6 warnings, all in untouched RN files.
+- `cargo tauri build --debug`: built `target/debug/ta-droid` and a `.deb` in 44 s. Started under `weston --backend=headless` with `GDK_BACKEND=wayland`, it was still alive after 6 s and was then stopped by PID. The only log noise is GDK seat warnings, because headless weston has no seat.
