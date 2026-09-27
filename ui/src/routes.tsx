@@ -4,6 +4,7 @@ import * as S from './screens/placeholders';
 import { AccountsScreen } from './screens/AccountsScreen';
 import { BackendScreen } from './screens/BackendScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { WatchlistsScreen } from './screens/WatchlistsScreen';
 
 export const DEFAULT_TICKER = 'AMD';
 
@@ -19,7 +20,7 @@ export const routes: RouteObject[] = [
       { path: '/chart/:ticker/exit', element: <S.ExitScreen /> },
       { path: '/positions', element: <S.PositionsScreen /> },
       { path: '/orders', element: <S.OrdersScreen /> },
-      { path: '/watchlists', element: <S.WatchlistsScreen /> },
+      { path: '/watchlists', element: <WatchlistsScreen /> },
       { path: '/settings', element: <SettingsScreen /> },
       { path: '/settings/accounts', element: <AccountsScreen /> },
       { path: '/settings/backend', element: <BackendScreen /> },

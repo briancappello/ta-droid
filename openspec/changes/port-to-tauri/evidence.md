@@ -433,3 +433,28 @@
   - **switching to `e2e-auth` gets MS/FA up, and fake-backends logs `cf-access-client-id: test-client-id` on the health probe; after `reloadSession()` (a new app process) Settings still shows `e2e-auth`.**
   - The `after` hook restores the `e2e` profile.
 - Screenshots: `settings-accounts.png`, `settings-backend.png`.
+
+### 5.4 Watchlists
+- `format.ts` is moved over unchanged.
+- `WatchlistPicker` is a radio-style modal.
+- `WatchlistsScreen`:
+  - REST paint first; a failed entries fetch is ignored.
+  - `live.watchlist` replaces every row on each update.
+  - Price colored against the prior close; signed change % colored against the open; aggregates show `avg_pct_change`; rows with no data show `--`.
+  - "Watchlists unavailable." when listing is empty or fails.
+  - Tapping a row opens `/chart/<symbol>`.
+  - Unsubscribes when the list changes or the screen unmounts, not when it is merely hidden.
+- A test helper `channelSender` delivers Rust-style `{index, message}` frames to a mocked `Channel`.
+- Vitest (11 new; 38 total):
+  - `format` (4, ported);
+  - `watchlistsScreen` (2 ported, with a list-failure variant);
+  - live replacement;
+  - list switch: subscribe `[w1, w2]` and unsubscribe `[1]`, plus aggregate and `--` rows;
+  - a row opens the chart;
+  - unmount unsubscribes.
+- G3 `e2e/specs/watchlists.e2e.ts`: 4 passing:
+  - REST paint of Momentum from fake-backends, with 4 decimals for PENNY;
+  - **a `watchlist_update` pushed through `/__control/push` replaces the rows** (LIVE +25.00%);
+  - switching to the sector aggregate shows +1.23%;
+  - a tapped row opens the chart.
+- Screenshots: `watchlists-rest.png`, `watchlists-live.png`.

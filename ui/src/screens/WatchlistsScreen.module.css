@@ -1,0 +1,17 @@
+.pickerRow { padding: 8px 12px; }
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 12px;
+  border-bottom: 1px solid #22314f;
+}
+.symbol { font-size: 15px; font-weight: 600; }
+.quote { display: flex; align-items: baseline; gap: 8px; }
+.price { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.change { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.neutral { color: #e0e0e0; }
+.unavailable { flex: 1; display: flex; align-items: center; justify-content: center; color: #8a97b0; padding: 48px 0; }
+.radio { display: inline-block; width: 12px; height: 12px; border-radius: 6px; border: 2px solid #666; margin-right: 10px; vertical-align: -1px; }
+.radioOn { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 45%, transparent 50%); }

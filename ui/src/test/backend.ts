@@ -26,3 +26,12 @@ export function mockBackend(handlers: Handlers = {}): { cmd: string; args: Recor
   });
   return calls;
 }
+
+/** Deliver messages to a Channel passed to a mocked command, as Rust would. */
+export function channelSender<T>(channel: unknown): (message: T) => void {
+  const id = (channel as { id: number }).id;
+  let index = 0;
+  const internals = (window as unknown as { __TAURI_INTERNALS__: { runCallback: (id: number, data: unknown) => void } })
+    .__TAURI_INTERNALS__;
+  return message => internals.runCallback(id, { index: index++, message });
+}

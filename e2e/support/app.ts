@@ -55,3 +55,23 @@ export async function openProvisionedApp(): Promise<void> {
   await browser.refresh();
   await $('[data-testid="app-root"]').waitForExist();
 }
+
+/** Push a MarketStore stream message through fake-backends. */
+export async function pushStream(key: string, data: unknown): Promise<void> {
+  await fetch(`${FAKE()}/__control/push`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ key, data }),
+  });
+}
+
+/** Keep pushing until `done()` holds (the socket subscribes lazily). */
+export async function pushUntil(key: string, data: unknown, done: () => Promise<boolean>, timeoutMs = 20_000): Promise<void> {
+  const end = Date.now() + timeoutMs;
+  while (Date.now() < end) {
+    await pushStream(key, data);
+    if (await done()) return;
+    await new Promise(r => setTimeout(r, 250));
+  }
+  throw new Error(`stream message for ${key} never took effect`);
+}
