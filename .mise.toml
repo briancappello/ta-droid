@@ -74,12 +74,23 @@ depends = ["setup:e2e", "build:ui"]
 # The emulator console and adb ports are shared, so never run two at once.
 run = "UI_PREBUILT=1 e2e/run-android.sh"
 
+[tasks."package:pmos"]
+description = "postmarketOS apk in rootless podman: x86_64, or pass aarch64 for the phone"
+depends = ["build:ui"]
+run = "packaging/build-alpine.sh"
+
+[tasks."e2e:pmos"]
+description = "G5: install, provision, and restart the app in the postmarketOS qemu-amd64 VM"
+depends = ["build:ui"]
+env = { TA_DROID_CONFIG = "config/app-config.e2e.toml", ALPINE_OUT = "{{config_root}}/artifacts/g5/pkg", ALPINE_FAST = "1" }
+run = ["packaging/build-alpine.sh x86_64", "e2e/run-pmos.sh"]
+
 [tasks.verify]
 description = "Desktop gates: G1-G3"
 depends = ["verify:core", "verify:ui", "e2e:desktop"]
 run = "echo 'verify: all gates passed'"
 
 [tasks."verify:mobile"]
-description = "Mobile gates: G4 (G5 is added in task 6.6)"
-depends = ["e2e:android"]
+description = "Mobile gates: G4 and G5"
+depends = ["e2e:android", "e2e:pmos"]
 run = "echo 'verify:mobile: all gates passed'"
