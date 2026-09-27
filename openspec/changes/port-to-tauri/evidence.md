@@ -479,3 +479,11 @@
   - The panes are stubbed because jsdom has no canvas.
 - G3 `e2e/specs/chart.e2e.ts`: 7 passing — AMD at 1Y with three drawn canvases and the last price; the AAPL strip (Paper 10, Live 3) and Exit; the 1D, 5D, and 5Y ranges drawn; **5D shows exactly Mon–Fri day labels**; a frequency change inside 1M; and "symbol not found" for NOPE.
 - Screenshots for 1Y, 1D, 5D, and 5Y are in `artifacts/g3/chart-*.png`. The 1Y and 5D images were checked by eye: candles, SMAs, dashed Bollinger bands, volume, and the MACD and RSI panes, all aligned.
+
+### 5.6 Live bars on the chart
+- The code landed with 5.5 (`live.bars` → `barFromBarPayload` → `pushBar` plus the last price; resubscribe on symbol or frequency change). This task adds the end-to-end proof.
+- G3 `e2e/specs/live-bars.e2e.ts`: 3 passing:
+  - on AAPL 1D, fake-backends' last WS union contains `AAPL/1Min/OHLCV`;
+  - **a bar pushed through `/__control/push` (close 999.99) changes the header price to 999.99, and the last candle spikes to it** (`artifacts/g3/live-bar.png`);
+  - switching to 5min moves the union to `AAPL/5Min/OHLCV` and drops `1Min`.
+- Unit coverage from 5.5: the live-bar price and push test, and the range change moving `subscribe_bars` to `1Min`.
