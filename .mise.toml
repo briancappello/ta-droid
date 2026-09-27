@@ -38,11 +38,15 @@ description = "SecretStore contract against the session's Secret Service (writes
 dir = "src-tauri"
 run = "cargo test -p ta-core --test store -- --ignored"
 
+[tasks.bindings]
+description = "Regenerate the ts-rs TypeScript bindings in ui/src/bindings"
+run = "scripts/bindings.sh"
+
 [tasks."verify:ui"]
-description = "G2: UI typecheck, lint, and tests"
+description = "G2: UI typecheck, lint, tests, and binding staleness"
 dir = "ui"
 depends = ["setup:ui"]
-run = ["pnpm typecheck", "pnpm lint", "pnpm test"]
+run = ["../scripts/bindings.sh --check", "pnpm typecheck", "pnpm lint", "pnpm test"]
 
 [tasks."setup:e2e"]
 description = "Install the WebdriverIO suite from the lockfile"

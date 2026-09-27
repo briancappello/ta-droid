@@ -8,6 +8,8 @@ use ta_core::keys;
 use ta_core::store::KvStore;
 use zeroize::Zeroizing;
 
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Action {
@@ -25,6 +27,8 @@ pub fn action(shipped: Option<&EncryptedBlob>, stored_fingerprint: Option<&str>)
     }
 }
 
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case", tag = "outcome")]
 pub enum Outcome {

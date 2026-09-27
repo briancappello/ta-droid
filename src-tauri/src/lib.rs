@@ -1,4 +1,9 @@
+pub mod commands;
+pub mod state;
+mod stores;
+
 use ta_core::config::AppConfig;
+use tauri::Manager;
 
 /// The build-time app config, validated by build.rs.
 pub const APP_CONFIG: &str = include_str!(concat!(env!("OUT_DIR"), "/app-config.toml"));
@@ -10,8 +15,25 @@ pub fn app_config() -> AppConfig {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     ta_core::net::install_default_crypto_provider();
-    let _config = app_config();
     tauri::Builder::default()
+        .setup(|app| {
+            let (secrets, prefs) = stores::open(app.handle())?;
+            let state = tauri::async_runtime::block_on(async {
+                state::AppState::new(app_config(), secrets, prefs)
+            })
+            .map_err(|e| e.message)?;
+            app.manage(state);
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            commands::provisioning_status,
+            commands::provision,
+            commands::list_accounts,
+            commands::set_active_account,
+            commands::list_profiles,
+            commands::set_active_profile,
+            commands::health,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running the ta-droid application");
 }

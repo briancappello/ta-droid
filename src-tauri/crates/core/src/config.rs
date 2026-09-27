@@ -9,8 +9,19 @@ use std::collections::BTreeMap;
 
 /// A broker the app can trade through.
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Deserialize, serde::Serialize,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    PartialOrd,
+    Ord,
+    Deserialize,
+    serde::Serialize,
+    ts_rs::TS,
 )]
+#[ts(export)]
 #[serde(rename_all = "lowercase")]
 pub enum BrokerId {
     Alpaca,

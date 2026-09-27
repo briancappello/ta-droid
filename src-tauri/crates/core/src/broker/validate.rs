@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use super::{NewOrderRequest, OrderSide, OrderType, TimeInForce};
 
 /// The order form as the user filled it in. Numbers are the raw text.
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OrderForm {
     pub symbol: String,

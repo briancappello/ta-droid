@@ -20,6 +20,8 @@ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::HeaderValue;
 
 /// One stream message for a key.
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StreamMessage {
     pub key: String,

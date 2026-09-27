@@ -51,6 +51,8 @@ pub struct Bars {
     pub bars: Vec<Bar>,
 }
 
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Quote {
     #[serde(rename(serialize = "ticker"), alias = "ticker")]
@@ -185,9 +187,12 @@ pub const OHLCV_COLUMNS: [&str; 5] = ["open", "high", "low", "close", "volume"];
 
 /// Columnar history: OHLCV then the indicator columns; `index` is epoch ms.
 /// OHLCV cells are always set; indicator cells are `None` during warmup.
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, PartialEq, Serialize, Default)]
 pub struct History {
     pub columns: Vec<String>,
+    #[ts(type = "Array<number>")]
     pub index: Vec<i64>,
     pub data: Vec<Vec<Option<f64>>>,
 }

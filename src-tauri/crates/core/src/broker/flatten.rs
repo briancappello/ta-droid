@@ -16,6 +16,8 @@ pub struct Holding<'a> {
 
 /// One exit order. Carries no secrets: the backend looks the account up by
 /// id when it submits.
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Leg {
     pub account_id: String,
@@ -24,6 +26,8 @@ pub struct Leg {
     pub req: NewOrderRequest,
 }
 
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LegResult {
     pub account_id: String,
@@ -32,6 +36,8 @@ pub struct LegResult {
     pub error: Option<String>,
 }
 
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SubmitOutcome {
     pub results: Vec<LegResult>,

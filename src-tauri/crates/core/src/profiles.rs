@@ -38,6 +38,8 @@ pub fn set_active<'a>(
 }
 
 /// What the UI may know about a profile: no header values.
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ProfileView {
     pub name: String,
@@ -125,6 +127,8 @@ fn join(base: &str, path: &str) -> String {
     format!("{}{}", base.trim_end_matches('/'), path)
 }
 
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Health {
@@ -132,6 +136,8 @@ pub enum Health {
     Down,
 }
 
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct HealthReport {
     pub marketstore: Health,

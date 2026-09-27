@@ -33,6 +33,8 @@ impl std::fmt::Debug for Account {
 }
 
 /// What the UI may know about an account.
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct AccountView {
     pub id: String,

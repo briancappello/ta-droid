@@ -13,6 +13,8 @@ use crate::net::{self, ClientOptions, NetError};
 pub const TIMEOUT: Duration = Duration::from_secs(30);
 
 /// A failed broker call. `status` is 0 when no HTTP response arrived.
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, Serialize)]
 #[error("{message}")]
 pub struct AlpacaError {

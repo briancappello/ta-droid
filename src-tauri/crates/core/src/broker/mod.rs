@@ -7,6 +7,8 @@ pub mod validate;
 
 use serde::{Deserialize, Serialize};
 
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum OrderSide {
@@ -23,6 +25,8 @@ impl OrderSide {
     }
 }
 
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum OrderType {
@@ -33,6 +37,8 @@ pub enum OrderType {
     TrailingStop,
 }
 
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TimeInForce {
@@ -47,6 +53,8 @@ pub enum TimeInForce {
 /// An open position (GET /v2/positions element). Alpaca numerics are
 /// strings; enum-like fields stay strings so new wire values never break
 /// parsing.
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Position {
     pub symbol: String,
@@ -76,6 +84,8 @@ pub struct Position {
 }
 
 /// An order (GET/POST /v2/orders element), reduced to what the app reads.
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Order {
     pub id: String,
@@ -109,6 +119,8 @@ pub struct Order {
 }
 
 /// POST /v2/orders body. Fields a type does not need are left out.
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NewOrderRequest {
     pub symbol: String,
@@ -132,6 +144,8 @@ pub struct NewOrderRequest {
     pub client_order_id: Option<String>,
 }
 
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum OrderQueryStatus {
@@ -141,6 +155,8 @@ pub enum OrderQueryStatus {
     All,
 }
 
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OrderFilter {
     #[serde(default)]
@@ -156,6 +172,8 @@ pub struct OrderFilter {
 }
 
 /// PATCH /v2/orders/{id} body.
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ReplaceOrderRequest {
     #[serde(skip_serializing_if = "Option::is_none", default)]

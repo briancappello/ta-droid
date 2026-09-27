@@ -282,3 +282,27 @@
   - Alpaca state, recorded orders, duplicate-id rejection, and 401 on a wrong secret;
   - **every failure mode** (down, 401, 429, 422, slow timeout), `times` consumption, key- and method-scoped rules, and reset.
 - `mise run verify`: exit 0. Section 3 is complete.
+
+## 4. Tauri command layer
+
+### 4.1 State, first commands, typed bindings
+- `src-tauri/src/state.rs`:
+  - `AppState { config, secrets, prefs, live: RwLock<Live{accounts, backend, stream, alpaca}> }` with `provisioning_status`, `provision` (Argon2 runs in `spawn_blocking`, then accounts and the backend reload), `accounts`, `set_active_account` (rejects unknown ids), `profiles`, `set_active_profile` (persists, then rebuilds the backend and stream), and `health`.
+  - Command errors are `CmdError { message }`.
+- `src-tauri/src/commands.rs` adapts these seven methods to IPC.
+- `src-tauri/src/stores.rs` picks the stores:
+  - `e2e` builds: a `FileStore` under `TA_DROID_DATA_DIR`.
+  - Linux: Secret Service, falling back to a store that fails every call. Provisioning then reports `save-failed` instead of silently storing secrets in plain files.
+  - Android: that failing store until 6.3.
+  - Preferences: a `FileStore` at `app_data_dir/prefs.json`.
+- ts-rs 12 (`serde-json-impl`) derives on 29 DTOs in `ta-core` and `ta-provision`, plus `CmdError`, `ProvisioningStatus`, `AccountsView`, and `ProfilesView` in the app. `History.index` is typed `Array<number>`, not bigint.
+  - `scripts/bindings.sh` (`mise run bindings`) writes `ui/src/bindings` (31 files).
+  - `--check` regenerates into a temp dir and runs `diff -r`; it is the first step of G2.
+  - Plain `cargo test` exports to `target/ts-bindings`, so it never overwrites the committed bindings.
+- Staleness check proven: adding one doc comment to `HealthReport` without regenerating made `--check` exit 1 with "ui/src/bindings is stale" and the diff. Reverting passes again.
+- `cargo test -p ta-droid --test state`: 4 passed against fake-backends:
+  - the provisioning gate: wrong passphrase, then right; accounts load; **serialized views contain no key or secret**;
+  - save failure keeps the prompt;
+  - active account switches, rejects unknown ids, and persists across a new `AppState`;
+  - profile switch persists, `e2e-auth` sends the provisioned `CF-Access-Client-Secret` on health, and the profile view has no header values.
+- `mise run verify`: exit 0.

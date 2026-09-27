@@ -6,6 +6,8 @@ use serde_json::Value;
 use crate::marketstore::{self, MarketDataError};
 use crate::profiles::Backend;
 
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct WatchlistRef {
     /// The MarketStore name, used for requests and the stream key.
@@ -32,6 +34,8 @@ pub fn label(name: &str) -> &str {
 }
 
 /// One display row.
+#[derive(ts_rs::TS)]
+#[ts(export)]
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct WatchRow {
     pub symbol: String,
