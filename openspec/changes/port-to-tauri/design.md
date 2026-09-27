@@ -70,7 +70,7 @@ config/app-config.example.toml
 ### D5. Secret store
 A `SecretStore` trait in `core` with three implementations:
 - **Linux:** the `keyring` crate over the Secret Service (works on Phosh and Plasma Mobile).
-- **Android:** a Keystore-backed store. Task 2 checks whether a maintained Rust store for Android Keystore (`keyring` ecosystem) works with the NDK.
+- **Android:** a Keystore-backed store. Task 6.3 checks whether a maintained Rust store for Android Keystore (`keyring` ecosystem) works with the NDK.
   - If it works, we use it.
   - If not, we write a small Tauri mobile plugin in Kotlin: an AES-GCM key held in the Android Keystore encrypts the values, which are stored in app-private storage.
   
@@ -103,7 +103,7 @@ Argon2 with 256 MiB takes a few seconds on a phone. It runs on a blocking thread
 It replaces `.env` and `react-native-config`. The `e2e` feature compiles in an extra `e2e` profile that points at `fake-backends` on `127.0.0.1`.
 
 ### D9. UI stack
-- **Routing:** `react-router` with a memory router. It recreates the drawer, the stacks, and history-based back. The Android back button is wired to router history through Tauri's back-button hook; task 5 checks that this hook exists in the pinned Tauri version.
+- **Routing:** `react-router` with a memory router. It recreates the drawer, the stacks, and history-based back. The Android back button is wired to router history through Tauri's back-button hook; task 6.7 checks that this hook exists in the pinned Tauri version.
 - **Styling:** CSS modules, with safe areas from `env(safe-area-inset-*)` and `viewport-fit=cover`.
 - **Chart:** `lightweight-charts` 4.2.3 imported from npm and mounted in `div`s. Pane sync, "fake UTC" Eastern time, and 5D slot padding keep their current TypeScript logic (`chartTime.ts`), moved into `ui/`.
 - **Pure display helpers stay in TypeScript:** `chartTime.ts` and `format.ts`.
@@ -117,7 +117,7 @@ It replaces `.env` and `react-native-config`. The `e2e` feature compiles in an e
 This enforces the secret boundary in app-shell/spec.md.
 
 ### D11. Hardware-free verification gates
-All gates run headless on the workstation. They are wired as `mise` tasks: `mise run verify` runs G1–G4 on every task, and `mise run verify:slow` runs G5–G6 at the end of each task group.
+All gates run headless on the workstation. **The port is built desktop-first:** `mise run verify` runs G1–G3 on every task through section 5. The mobile gates start in section 6: `mise run verify:mobile` runs G4 and G5, and G6 runs once, during packaging.
 
 | Gate | Proves | How |
 |---|---|---|
@@ -125,8 +125,8 @@ All gates run headless on the workstation. They are wired as `mise` tasks: `mise
 | G2 ui | Components and screens | `vitest`, `tsc --noEmit`, `eslint`; IPC mocked |
 | G3 desktop e2e | The real app, IPC, and WebKitGTK (the Linux phone engine) | `tauri-driver` + `WebKitWebDriver` + WebdriverIO under `weston --backend=headless`, app built with `--features e2e` against `fake-backends` |
 | G4 android e2e | APK install, Keystore store, Android WebView, back button | `Pixel_8` AVD with `-no-window -gpu swiftshader_indirect`, debug x86_64 APK, `adb reverse` to `fake-backends`, WebdriverIO through Appium UiAutomator2 in the WEBVIEW context |
-| G5 pmOS smoke | aarch64 musl build, launch under Phosh, Secret Service | Exported pmbootstrap image booted with `qemu-system-aarch64` (TCG, user networking, ssh on host port 2222); app package installed over ssh; `ssh -R` exposes `fake-backends`; launch, check the process, capture a screenshot with `grim`, and read the fake-backend request log |
-| G6 packages | Distributable artifacts | Android release-shaped AAB/APK (unsigned); postmarketOS `.apk` built with `abuild` in a rootless arm64 Alpine container; Droidian arm64 `.deb` built in a rootless arm64 Debian container |
+| G5 pmOS smoke | musl build, launch under Phosh, Secret Service | pmbootstrap `qemu-amd64` image booted with `qemu-system-x86_64 -enable-kvm` (user networking, ssh on host port 2222); x86_64 musl build from a rootless x86_64 Alpine container; installed over ssh, run as a user service in the Phosh session; `ssh -R` exposes `fake-backends`; `grim` screenshot and the fake-backend request log |
+| G6 packages | Distributable artifacts, built once in section 7 | Android release-shaped AAB/APK (unsigned); postmarketOS `.apk` for x86_64 and, once, aarch64 (emulated arm64 Alpine); Droidian arm64 `.deb` (emulated arm64 Debian, prebuilt tauri-cli for the bundler) |
 
 - G3 and G4 run **the same WebdriverIO specs**. The only differences are the connection capabilities.
 - *Alternative for G4: Chrome DevTools Protocol through an `adb` forward.* It is lighter, but it would need a second driver and a second copy of each spec. Rejected in favor of shared specs.
@@ -148,12 +148,12 @@ All gates run headless on the workstation. They are wired as `mise` tasks: `mise
 
 ## Risks / Trade-offs
 
-- **[Android Keystore store maturity]** → Task 2 decides between a Rust store and a Kotlin plugin, behind a fixed trait. The fallback is about 100 lines of Kotlin.
+- **[Android Keystore store maturity]** → Task 6.3 decides between a Rust store and a Kotlin plugin, behind a fixed trait. The fallback is about 100 lines of Kotlin.
 - **[TA-Lib does not build cleanly with the NDK or musl through `cc`]** → Pin the sources and compile only the files we need. G1 builds for all four targets in the task that introduces the crate, so failures show up early.
 - **[WebKitGTK under headless weston needs a GPU]** → Force software rendering in G3 (`LIBGL_ALWAYS_SOFTWARE=1`, and `WEBKIT_DISABLE_DMABUF_RENDERER=1` if needed). The fallback is `xvfb` with XWayland.
 - **[Appium chromedriver must match the WebView version]** → Use Appium's chromedriver auto-download, pinned by the AVD's WebView version.
 - **[The aarch64 builds under qemu-user are slow (tens of minutes)]** → Cache the cargo registry and target directory in podman volumes, and run G5 and G6 only once per task group.
-- **[pmOS under TCG is slow or flaky]** → If G5 cannot pass reliably, reduce it to "package builds and the binary starts headless in the VM". The Phosh visual check moves to the end batch, recorded in `evidence.md`.
+- **[Emulated arm64 is slow]** → Measured in the first attempt: 34 min for an aarch64 musl release build and 21 min for the arm64 `.deb` under qemu-user, plus a TCG VM. So G5 uses an x86_64 pmOS image under KVM. The only arm64 builds are the release packages for the phones (7.2, 7.3), each built once.
 - **[The emulator does not show real touch feel or device GPU quirks]** → This is accepted. The end batch covers it on both phones.
 - **[Argon2 at 256 MiB on a phone]** → It runs once per blob, off the UI thread, with a busy state. Both target phones have 8 GB or more of RAM.
 - **[Secrets reaching the UI by mistake]** → DTO types have no secret fields, and G3 and G4 check that no provisioned value appears in any IPC payload (fake-backends records the values and the e2e hook scans responses).

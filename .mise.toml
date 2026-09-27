@@ -9,7 +9,8 @@ ANDROID_HOME = "{{env.HOME}}/Android/Sdk"
 NDK_HOME = "{{env.HOME}}/Android/Sdk/ndk/27.1.12297006"
 
 # Verification gates for the Tauri port (openspec/changes/port-to-tauri, design D11).
-# `verify` runs G1-G4 on every task; `verify:slow` runs G5-G6 per task group.
+# Desktop first: `verify` runs G1-G3 on every task. `verify:mobile` (G4, G5)
+# starts once the app is complete on the desktop.
 
 [tasks."setup:ui"]
 description = "Install the UI dependencies from the lockfile"
@@ -59,10 +60,11 @@ depends = ["setup:e2e", "build:ui"]
 run = "UI_PREBUILT=1 e2e/run-android.sh"
 
 [tasks.verify]
-description = "Fast gates: G1-G4"
-depends = ["verify:core", "verify:ui", "e2e:desktop", "e2e:android"]
+description = "Desktop gates: G1-G3"
+depends = ["verify:core", "verify:ui", "e2e:desktop"]
 run = "echo 'verify: all gates passed'"
 
-[tasks."verify:slow"]
-description = "Slow gates: G5-G6"
-run = "echo 'verify:slow: no slow gates wired yet'"
+[tasks."verify:mobile"]
+description = "Mobile gates: G4 (G5 is added in task 6.6)"
+depends = ["e2e:android"]
+run = "echo 'verify:mobile: all gates passed'"

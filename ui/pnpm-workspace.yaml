@@ -1,5 +1,5 @@
 # Standalone pnpm root for the Tauri UI, separate from the React Native project
-# at the repository root until the cutover (openspec port-to-tauri, task 7.6).
+# at the repository root until the cutover (openspec port-to-tauri, task 8.6).
 packages:
   - .
 minimumReleaseAgeExclude:

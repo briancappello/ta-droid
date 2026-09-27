@@ -75,3 +75,18 @@
   - A `mobi.phosh.Shell` drop-in adds `--unlocked` (gsettings `lock-enabled=false` was not enough), and the screen lock and idle are disabled.
   - It installs `grim` and `jq`, then reboots, because greetd runs `initial_session` once per boot.
 - Result: two cold boots in a row each had one `brian` session on `seat0` and `uname -m` → `aarch64`. Batch-mode ssh uses the VM-only key. `artifacts/g5/phosh-home.png` (720×1440) shows the unlocked Phosh app grid.
+
+### Re-plan: desktop first, pmOS on amd64 (2026-09-27)
+- The operator redirected the work. The port runs on the Linux desktop first, and the mobile gates follow. G4 and the pmOS VM had been built before any app code existed.
+- Measured cost of the arm64 path (old task 2.5):
+  - The aarch64 musl release build in emulated Alpine took **33 min 52 s**. It ran under Phosh in the TCG VM (screenshot was taken).
+  - The arm64 `.deb` in emulated Debian took **20 min 50 s**.
+  - The TCG VM also needed its disk grown from 3 GiB to 10 GiB.
+  - That work (`packaging/builders/*`, `packaging/build-linux-arm64.sh`, `e2e/run-pmos.sh`, `vm.sh app-start`/`app-stop`) is parked in `git stash` ("parked: arm64 G5/G6 builders"). Task 7.x reuses it for the one-time phone packages.
+- Changes to tasks.md:
+  - Section 2 is desktop-only.
+  - Old 2.3 is now 6.1, old 2.4 is 6.2 (superseded), old 2.6 is 6.3, and old 2.7 is 2.3 (host target only; the cross targets moved to 6.4).
+  - The new 6.5 moves the pmOS VM to `qemu-amd64` with KVM (the operator rebuilds the image), and 6.6 adds the x86_64 musl build and G5.
+  - Packaging is now section 7 and the end batch section 8.
+- design.md D11 and the Risks section are updated to match.
+- `mise run verify` is now G1–G3 only and takes 12 s. `verify:mobile` holds G4.
