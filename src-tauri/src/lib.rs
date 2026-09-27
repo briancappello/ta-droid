@@ -9,6 +9,7 @@ pub fn app_config() -> AppConfig {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    ta_core::net::install_default_crypto_provider();
     let _config = app_config();
     tauri::Builder::default()
         .run(tauri::generate_context!())

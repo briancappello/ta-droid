@@ -1,6 +1,7 @@
 use fake_backends::{FakeState, LoggedRequest};
 
 async fn start(state: FakeState) -> String {
+    ta_core::net::install_default_crypto_provider();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base = format!("http://{}", listener.local_addr().unwrap());
     tokio::spawn(fake_backends::serve(listener, state));

@@ -165,3 +165,23 @@
   - a broken preference store is ignored;
   - serialized `AccountView` has exactly `broker, id, is_paper, key_last4, name`, with no key or secret text, and `Debug` redacts too.
 - `mise run verify`: exit 0.
+
+### 3.6 Profiles and health
+- `ta_core::net`: rustls with the **ring** provider, `webpki-roots`, and an optional per-profile PEM CA. It is handed to reqwest 0.13 through `tls_backend_preconfigured` (features `rustls-no-provider`, json, query, http2).
+  - Chosen over reqwest's default (aws-lc-rs plus `rustls-platform-verifier`). That verifier needs JNI initialization on Android, and aws-lc needs a C/CMake cross build. The trust set is now the same on every platform.
+  - Auth header values are marked sensitive.
+- Gotcha: cargo unifies reqwest features across the workspace, so a plain `reqwest::Client::new()` elsewhere (the fake-backends tests) panicked with "No rustls crypto provider". `net::install_default_crypto_provider()` fixes it; the app calls it at startup and the fake-backends tests call it.
+- `ta_core::profiles`:
+  - `active` returns the persisted profile, else the first. `set_active` rejects unknown names.
+  - `ProfileView` shows `has_auth` and `has_custom_ca` and no header names or values.
+  - `Backend` carries the profile client, with headers taken from `backend.<profile>.<header>` secrets; unprovisioned headers are left out, and `Debug` is redacted.
+  - `health` probes `/v1/health` and `/health` in parallel with a 10 s timeout, and any failure is `Down`.
+- `cargo test -p ta-core --test profiles`: 7 passed:
+  - active profile default, persistence, and fallback;
+  - the view hides header values;
+  - **wiremock requires both CF-Access headers on MarketStore and fa-techan over plain http**;
+  - one backend down does not affect the other (connection refused);
+  - 500 and 404 count as down;
+  - **a private-CA TLS server (rcgen CA plus leaf, tokio-rustls) is rejected without the profile CA and accepted with it**;
+  - invalid CA PEM is a setup error.
+- The health default of "unknown" and the 20 s polling from `backendContext.test.tsx` are UI state, covered in 5.1. `mise run verify`: exit 0.

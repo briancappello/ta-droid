@@ -4,4 +4,6 @@
 pub mod accounts;
 pub mod config;
 pub mod keys;
+pub mod net;
+pub mod profiles;
 pub mod store;

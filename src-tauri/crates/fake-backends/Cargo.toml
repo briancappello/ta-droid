@@ -15,3 +15,6 @@ tokio = { workspace = true, features = ["net", "fs", "io-util", "signal"] }
 
 [dev-dependencies]
 reqwest = { version = "0.13", default-features = false, features = ["json"] }
+# reqwest's TLS features are unified across the workspace (ta-core picks
+# rustls without a provider), so tests install one.
+ta-core = { path = "../core" }
