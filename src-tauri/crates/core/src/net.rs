@@ -58,6 +58,13 @@ pub fn tls_config(extra_ca_pem: Option<&str>) -> Result<ClientConfig, NetError> 
     Ok(cfg)
 }
 
+/// Like [`tls_config`] for WebSockets, which must negotiate HTTP/1.1.
+pub fn ws_tls_config(extra_ca_pem: Option<&str>) -> Result<ClientConfig, NetError> {
+    let mut cfg = tls_config(extra_ca_pem)?;
+    cfg.alpn_protocols = vec![b"http/1.1".to_vec()];
+    Ok(cfg)
+}
+
 /// Options for one HTTP client.
 pub struct ClientOptions<'a> {
     pub extra_ca_pem: Option<&'a str>,

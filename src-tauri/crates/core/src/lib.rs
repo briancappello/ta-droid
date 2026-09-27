@@ -9,4 +9,5 @@ pub mod marketstore;
 pub mod net;
 pub mod profiles;
 pub mod store;
+pub mod stream;
 pub mod watchlists;

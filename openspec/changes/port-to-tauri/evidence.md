@@ -205,3 +205,18 @@
 - `ta_core::watchlists`: `label` (10 friendly names, unknown shown raw), `to_row`, `stream_key`, `list`, and `entries` (REST `fields` merged in).
 - DTO field names are snake_case (`price_up`, `change_pct`, …); the UI uses the generated types from 4.1.
 - `cargo test -p ta-core --test marketstore`: 18 passed. That covers all 24 cases of `marketstore.test.ts` (9), `apiHistory.test.ts` (4), `apiQuotes.test.ts` (3), and `watchlists.test.ts` (6), merged where one Rust test checks several of them, plus unknown frequency making no request and a non-JSON 502. `mise run verify`: exit 0.
+
+### 3.9 MarketStore stream
+- `ta_core::stream`: `StreamClient::spawn` starts one background task per backend, which owns the socket.
+  - `subscribe(tbks)` returns a `Subscription` channel, and dropping it unsubscribes. That makes unsubscribing idempotent by construction; it replaces the RN `done` flag.
+  - Reference-counted keys in a `BTreeMap`, so the union is sorted and deterministic. Every change resends the full union, including `[]`.
+  - Frames with `action`, frames without `key`, and malformed frames are dropped. Dispatch is by exact key.
+  - Reconnects with `default_backoff` = `min(1000·2^n, 15000)` ms, reset on open, and resends the union.
+  - Connection failures never reach subscribers.
+- `StreamConfig::for_backend` sets the URL from `ws_url` (http→ws, https→wss, + `/ws`), the subprotocol `json`, the profile auth headers on the handshake (marked sensitive), and TLS through `net::ws_tls_config` (same roots and CA, ALPN `http/1.1` only). tokio-tungstenite 0.29 uses rustls with ring, and `cargo tree -i aws-lc-rs` finds nothing.
+- `cargo test -p ta-core --test stream`: 9 passed against an in-process tungstenite server:
+  - all 8 `marketstoreStream.test.ts` cases (the throwing-factory case is now "port refused, then the server comes up");
+  - backoff values;
+  - handshake `json` subprotocol plus the `CF-Access-Client-Id` header;
+  - no socket before the first subscription.
+- Stable across 8 repeated runs (0.34–0.35 s). `mise run verify`: exit 0.
