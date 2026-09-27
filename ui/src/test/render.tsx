@@ -20,3 +20,21 @@ export async function renderAt(path: string, routes: { path: string; element: Re
   await act(async () => {});
   return { ...r, router };
 }
+
+/** Like renderAt, inside the app Shell, with a history of entries. */
+export async function renderInShell(entries: (string | { pathname: string; state?: unknown })[], routes: { path: string; element: ReactElement }[]) {
+  const { Shell } = await import('../components/Shell');
+  const router = createMemoryRouter(
+    [{ element: <Shell />, children: [...routes, { path: '*', element: <p data-testid="elsewhere" /> }] }],
+    { initialEntries: entries, initialIndex: entries.length - 1 },
+  );
+  const r = render(
+    <AccountProvider>
+      <BackendProvider>
+        <RouterProvider router={router} />
+      </BackendProvider>
+    </AccountProvider>,
+  );
+  await act(async () => {});
+  return { ...r, router };
+}

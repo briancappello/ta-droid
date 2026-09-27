@@ -505,3 +505,28 @@
   - **a 401 scripted on LV1TEST shows "Check the API keys for this account." while PA1TEST still renders**;
   - the seeded AMD order "2 @ 100", "1 working".
 - Screenshots: `positions.png`, `positions-error.png`, `orders.png`.
+
+### 5.8 Order entry
+- `OrderEntryScreen`:
+  - Account picker (defaults to the chart's account, then the active one), symbol, BUY/SELL, QTY/NOTIONAL, the 5 order types (price fields only where needed), the 6 TIFs, and extended hours.
+  - "Review Order" validates through the backend `validate_order` and shows every message.
+  - The confirm modal lists symbol, side, size, type, prices, TIF, and account, with Cancel and Submit.
+  - Submit reads "Submitting…" and is disabled. **A ref guard stops a second tap in the same frame.**
+  - On success: `notify('Order submitted')`, then back. On failure: the broker message or "Failed to submit order.". With no account: "Select an account.".
+- The Shell gains `notify`, a 3 s notice that survives navigation and replaces the RN `Alert`.
+- Modify mode is not ported (it was unreachable in the RN app; trading spec: out of scope).
+- Vitest (6 new; 90 total):
+  - the prefilled symbol and account (ported);
+  - conditional fields;
+  - validation blocks review and sends nothing;
+  - review contents, then **one `place_order` despite a second tap**, then the notice and back;
+  - a broker error stays on the form;
+  - no account.
+- G3 `e2e/specs/order-entry.e2e.ts`: 3 passing:
+  - an incomplete limit order is rejected before review;
+  - **two `click()`s in one JS task on Submit produce exactly one POST in fake-backends** (AMD buy limit 3 @ 101.5, day, `ta-` id), with the notice and a return to the chart;
+  - a scripted 429 shows "Rate limited by Alpaca, retry shortly." and stays on the form.
+- Negative controls:
+  - Removing only the ref guard still passed, because the disabled button already blocks the second click once React re-renders. That is acceptable: one guard alone is enough.
+  - Removing both the guard and `disabled` failed the exactly-once test (the second click submitted again). Both were restored.
+- Screenshots: `order-review.png`, `order-submitted.png`.

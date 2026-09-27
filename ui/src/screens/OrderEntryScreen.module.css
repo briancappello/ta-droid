@@ -1,0 +1,17 @@
+.form { padding: 16px 16px calc(48px + var(--safe-bottom)); }
+.field { margin-bottom: 16px; }
+.label { display: block; color: #8a97b0; font-size: 12px; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.input { width: 100%; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-size: 16px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill { padding: 8px 12px; border-radius: 6px; border: 1px solid #444; color: #aaa; font-size: 13px; font-weight: 700; }
+.pillActive { background: var(--accent); border-color: var(--accent); color: #fff; }
+.toggle { color: var(--text); font-size: 14px; }
+.error { color: #ff6b6b; margin: 0 0 8px; }
+.submit { width: 100%; background: var(--accent); border-radius: 8px; padding: 14px; font-size: 16px; font-weight: 700; margin-top: 8px; }
+.submit:disabled, .confirm:disabled { opacity: 0.6; }
+.review { padding: 20px; min-width: 260px; }
+.reviewTitle { margin: 0 0 12px; font-size: 18px; }
+.reviewLine { margin: 4px 0; font-size: 14px; }
+.buttons { display: flex; justify-content: flex-end; gap: 16px; margin-top: 16px; align-items: center; }
+.cancel { color: #aaa; font-weight: 600; }
+.confirm { background: var(--accent); border-radius: 6px; padding: 8px 16px; font-weight: 700; }

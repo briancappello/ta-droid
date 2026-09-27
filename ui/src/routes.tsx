@@ -4,6 +4,7 @@ import * as S from './screens/placeholders';
 import { AccountsScreen } from './screens/AccountsScreen';
 import { ChartScreen } from './screens/ChartScreen';
 import { BackendScreen } from './screens/BackendScreen';
+import { OrderEntryScreen } from './screens/OrderEntryScreen';
 import { OrdersScreen } from './screens/OrdersScreen';
 import { PositionsScreen } from './screens/PositionsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
@@ -19,7 +20,7 @@ export const routes: RouteObject[] = [
       { path: '/', element: <Navigate to="/watchlists" replace /> },
       { path: '/chart', element: <Navigate to={`/chart/${DEFAULT_TICKER}`} replace /> },
       { path: '/chart/:ticker', element: <ChartScreen /> },
-      { path: '/chart/:ticker/order', element: <S.OrderEntryScreen /> },
+      { path: '/chart/:ticker/order', element: <OrderEntryScreen /> },
       { path: '/chart/:ticker/exit', element: <S.ExitScreen /> },
       { path: '/positions', element: <PositionsScreen /> },
       { path: '/orders', element: <OrdersScreen /> },
