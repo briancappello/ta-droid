@@ -10,6 +10,9 @@ export const baseHandlers: Handlers = {
   health: () => ({ marketstore: 'up', fatechan: 'up' }),
   list_profiles: () => ({ profiles: [], active: 'e2e' }),
   watchlists: () => [],
+  history: () => ({ columns: [], index: [], data: [] }),
+  symbol_holdings: () => [],
+  subscribe_bars: () => 99,
   unsubscribe: () => null,
 };
 

@@ -1,0 +1,10 @@
+.panes { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--bg); }
+.pane { position: relative; min-height: 0; }
+.main { flex: 55; }
+.macd { flex: 22; border-top: 1px solid #333; }
+.rsi { flex: 23; border-top: 1px solid #333; }
+.chart { position: absolute; inset: 0; }
+/* On the time axis where built-in ticks would be; above the chart canvases
+   (z-index 1) and never eating gestures. */
+.days { position: absolute; left: 0; right: 0; bottom: 2px; height: 12px; pointer-events: none; z-index: 2; }
+.days span { position: absolute; transform: translateX(-50%); color: #ccc; font-size: 10px; line-height: 12px; white-space: nowrap; }

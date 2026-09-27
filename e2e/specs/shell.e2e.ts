@@ -40,7 +40,7 @@ describe('app shell', () => {
 
   it('pushes stack screens and goes back through history', async () => {
     await openFromDrawer('chart', 'screen-chart');
-    await tid('to-order').click();
+    await tid('trade').click();
     await expect(tid('screen-order')).toBeDisplayed();
     await tid('back').click();
     await expect(tid('screen-chart')).toBeDisplayed();

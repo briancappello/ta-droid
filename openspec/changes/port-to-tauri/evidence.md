@@ -458,3 +458,24 @@
   - switching to the sector aggregate shows +1.23%;
   - a tapped row opens the chart.
 - Screenshots: `watchlists-rest.png`, `watchlists-live.png`.
+
+### 5.5 Chart
+- `ui/src/chart/`:
+  - `chartTime.ts`: moved unchanged, except `barFromBarPayload` now takes the typed `LiveBar`.
+  - `ranges.ts`: the RN `RANGES`, `FREQ_MINUTES`, `getRequestBars`, and `sliceToWindow` unchanged, plus the stream `TIMEFRAME` map.
+  - `series.ts`: the RN `buildChartHtml` data prep as a pure `buildSeries` (one shared slot list, whitespace for warmup and padding, direction colors, session opens), with `buildEasternOffsets` (binary search at a DST change) and `formatTick`.
+  - `ChartPanes.tsx`: lightweight-charts 4.2.3 imported from npm and drawn into three `div`s (55/22/23). It includes indicator series only when they have real values, syncs logical ranges, overlays the 5D day labels with `timeToCoordinate`, sets `minBarSpacing` 0.02, and exposes `pushBar` for live bars.
+  - **The WebView HTML bridge and the vendored bundle are gone.**
+- `ChartScreen.tsx`:
+  - Header: drawer, the editable symbol field (Enter uppercases and switches with a history `replace`; empty or unchanged input and blur snap back), the last price, and Trade (goes to `order` with `{symbol, accountId}` state).
+  - Range pills (opens at 1Y/D; a range change resets the frequency) and the frequency modal.
+  - Exit and the held-symbol strip from `symbol_holdings`.
+  - Spinner, error text, and "No data available for this range".
+  - `live.bars` resubscribes on a symbol or frequency change.
+- Vitest (25 new; 63 total):
+  - the 8 ported `chartTime` cases;
+  - 6 series/ranges tests: pane alignment with whitespace, Eastern shift and colors, 5D grid padding, the DST switch, tick labels, range defaults, request sizing, and window/5-session slicing;
+  - 11 `ChartScreen` tests: the 6 ported `chartScreen` cases plus the range reset, window slicing to 366 of 400 bars with the last close as price, spinner then error, the empty range, and a live bar updating the price and pushing an Eastern-shifted point.
+  - The panes are stubbed because jsdom has no canvas.
+- G3 `e2e/specs/chart.e2e.ts`: 7 passing — AMD at 1Y with three drawn canvases and the last price; the AAPL strip (Paper 10, Live 3) and Exit; the 1D, 5D, and 5Y ranges drawn; **5D shows exactly Mon–Fri day labels**; a frequency change inside 1M; and "symbol not found" for NOPE.
+- Screenshots for 1Y, 1D, 5D, and 5Y are in `artifacts/g3/chart-*.png`. The 1Y and 5D images were checked by eye: candles, SMAs, dashed Bollinger bands, volume, and the MACD and RSI panes, all aligned.

@@ -2,6 +2,7 @@ import { Navigate, type RouteObject } from 'react-router';
 import { Shell } from './components/Shell';
 import * as S from './screens/placeholders';
 import { AccountsScreen } from './screens/AccountsScreen';
+import { ChartScreen } from './screens/ChartScreen';
 import { BackendScreen } from './screens/BackendScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { WatchlistsScreen } from './screens/WatchlistsScreen';
@@ -15,7 +16,7 @@ export const routes: RouteObject[] = [
     children: [
       { path: '/', element: <Navigate to="/watchlists" replace /> },
       { path: '/chart', element: <Navigate to={`/chart/${DEFAULT_TICKER}`} replace /> },
-      { path: '/chart/:ticker', element: <S.ChartScreen /> },
+      { path: '/chart/:ticker', element: <ChartScreen /> },
       { path: '/chart/:ticker/order', element: <S.OrderEntryScreen /> },
       { path: '/chart/:ticker/exit', element: <S.ExitScreen /> },
       { path: '/positions', element: <S.PositionsScreen /> },

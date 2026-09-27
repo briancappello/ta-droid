@@ -1,0 +1,36 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(6px + var(--safe-top)) 8px 6px;
+  background: var(--panel);
+  gap: 8px;
+  flex: none;
+}
+.left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.menu { font-size: 22px; min-width: 32px; min-height: 32px; }
+.symbol {
+  width: 7ch;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 0;
+}
+.symbol:focus { outline: none; border-bottom-color: var(--accent); }
+.price { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.trade { background: var(--accent); color: #fff; border-radius: 6px; padding: 6px 14px; font-weight: 700; }
+.toolbar { display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--bg); flex: none; flex-wrap: wrap; }
+.pills { display: flex; gap: 4px; }
+.pill { padding: 4px 8px; border-radius: 4px; color: #aaa; font-size: 13px; font-weight: 600; }
+.pillActive { background: var(--accent); color: #fff; }
+.exit { margin-left: auto; background: #b71c1c; color: #fff; border-radius: 4px; padding: 5px 12px; font-weight: 700; font-size: 13px; }
+.strip { display: flex; gap: 6px; padding: 4px 8px 6px; overflow-x: auto; flex: none; }
+.posPill { display: flex; gap: 6px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 3px 10px; font-size: 12px; white-space: nowrap; }
+.center { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; }
+.error { color: #ff6b6b; }
+.spinner { width: 36px; height: 36px; border: 3px solid rgba(33, 150, 243, 0.25); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

@@ -38,8 +38,8 @@ test('the scrim closes the drawer', async () => {
 test('chart opens on AMD and its stack goes back through history', async () => {
   mockBackend();
   await renderApp('/chart');
-  expect(screen.getByTestId('screen-chart').textContent).toContain('AMD');
-  fireEvent.click(screen.getByTestId('to-order'));
+  expect((screen.getByTestId('symbol-input') as HTMLInputElement).value).toBe('AMD');
+  fireEvent.click(screen.getByTestId('trade'));
   expect(screen.getByTestId('screen-order')).toBeTruthy();
   fireEvent.click(screen.getByTestId('back'));
   expect(screen.getByTestId('screen-chart')).toBeTruthy();
