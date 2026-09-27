@@ -19,6 +19,7 @@ webpki-roots = "1"
 rustls-pki-types = "1"
 tokio.workspace = true
 futures = "0.3"
+getrandom = "0.3"
 tokio-tungstenite = { version = "0.29", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 keyring-core = "1"

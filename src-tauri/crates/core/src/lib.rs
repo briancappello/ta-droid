@@ -2,6 +2,7 @@
 //! is tested with plain `cargo test`.
 
 pub mod accounts;
+pub mod broker;
 pub mod config;
 pub mod indicators;
 pub mod keys;

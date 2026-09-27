@@ -221,3 +221,18 @@
   - no socket before the first subscription.
 - Stable across 8 repeated runs (0.34–0.35 s).
 - Process slip: commit `ff4c83e` was made while `mise run verify` was failing on two clippy lints (`manual_contains` in `stream.rs`, and `result_large_err` on the tungstenite handshake callback in the test, whose signature tungstenite fixes). The follow-up commit fixes both, and `mise run verify` exits 0. From here on, each commit is chained on `mise run verify &&`.
+
+### 3.10 Alpaca driver
+- `ta_core::broker`: wire types. `Position` and `Order` keep enum-like wire fields as strings, so a new Alpaca value never breaks parsing. `NewOrderRequest` omits unset price fields. Also `OrderFilter` and `ReplaceOrderRequest`.
+- `broker::alpaca::Alpaca`:
+  - A reqwest client with **redirects off** and a **30 s timeout**. The key and secret headers are marked sensitive.
+  - `list_positions`, `list_orders` (status defaults to open), `create_order` (never retried; `ta-<ms>-<8 base36>` client order id if none is given), `close_position`, `replace_order`, `cancel_order`.
+  - A 204 or empty body is success.
+  - `AlpacaError { status, message }` uses the spec messages (status 0 means no response).
+  - Hosts come from `AppConfig::broker_hosts`, so e2e points them at fake-backends.
+- "Unknown broker": `BrokerId` is an enum, so an unknown broker cannot be represented after parsing. The `driverFor` throw becomes a parse-time rejection, and there is a test for it.
+- `cargo test -p ta-core --test alpaca`: 14 passed. That covers the ported `alpaca` (4), `alpacaDriver` (8), and `broker` (3) cases, merged where one Rust test checks several; the RN import-wiring test does not apply. Extra tests:
+  - **a 302 to another host is not followed** (that host sees 0 requests) and fails as "Alpaca error (302).";
+  - a failed POST is sent exactly once;
+  - a given client order id is kept;
+  - all six status messages, network failure, and timeout.
