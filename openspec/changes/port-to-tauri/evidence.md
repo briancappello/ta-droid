@@ -120,3 +120,22 @@
 - `cargo test -p ta-core --test store`: 3 passed (memory and file contracts, persistence and 0600, corrupt file).
 - The Secret Service contract runs with `mise run test:secret-service` and passes (1 passed) against the desktop's KDE `ksecretd` (`org.freedesktop.secrets`), which Plasma Mobile also uses. It is not in `verify`, because it writes to the user's real wallet (a test service name, deleted afterwards). An isolated `dbus-run-session` was not possible: gnome-keyring is not installed ("The name org.freedesktop.secrets was not provided by any .service files").
 - `mise run verify`: exit 0.
+
+### 3.3 Blob format and crypto
+- New crate `ta-provision`:
+  - Crypto: Argon2id v1.3 (ops 3, 256 MiB, 32-byte key) with `argon2` 0.5.3, XSalsa20-Poly1305 with `crypto_secretbox` 0.1.1 (the 0.2 line is a pre-release), and standard base64.
+  - Fingerprint: sha256 hex of the ciphertext's base64 text.
+  - Plaintext: `{credentials: [...], backends: {profile: {header: value}}}`.
+  - Key material is zeroized on drop, and the `Debug` output of `Credential` and `Plaintext` omits keys, secrets, and header values.
+- CLI `ta-provision`:
+  - `encrypt PLAINTEXT.json` prints a `[credentials_blob]` TOML table.
+  - `check CONFIG.toml` decrypts and prints counts and ids only.
+  - The passphrase comes from `--passphrase-file` or a no-echo prompt (confirmed twice for `encrypt`).
+- `cargo test -p ta-provision`: 8 passed, covering:
+  - the **1.3 Node/libsodium fixture decrypts** to the same plaintext, and the fingerprint matches the Node value;
+  - wrong passphrase and tampered ciphertext both give `Decrypt`;
+  - a round trip gives a fresh salt and nonce each time;
+  - malformed fields are reported without decrypting;
+  - Debug output contains no key material;
+  - the CLI round trip prints no key, secret, header value, or passphrase, and `check` with a wrong passphrase fails.
+- Argon2 at 256 MiB is too slow unoptimized, so `argon2` and `blake2` build at opt-level 3 in the dev profile. The test binary runs in about 1.5 s. `mise run verify`: exit 0.

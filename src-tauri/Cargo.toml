@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "crates/fake-backends", "crates/talib-sys", "crates/core"]
+members = [".", "crates/fake-backends", "crates/talib-sys", "crates/core", "crates/provision"]
 resolver = "3"
 
 [workspace.package]
@@ -44,3 +44,9 @@ e2e = []
 lto = true
 codegen-units = 1
 strip = true
+
+# Argon2 at 256 MiB takes minutes unoptimized; keep dev builds and tests usable.
+[profile.dev.package.argon2]
+opt-level = 3
+[profile.dev.package.blake2]
+opt-level = 3
