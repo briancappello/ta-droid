@@ -50,6 +50,8 @@ pub fn run() {
             commands::place_order,
             commands::flatten_legs,
             commands::submit_flatten,
+            #[cfg(feature = "e2e")]
+            commands::e2e_reset,
         ])
         .run(tauri::generate_context!())
         .expect("error while running the ta-droid application");

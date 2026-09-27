@@ -158,6 +158,17 @@ impl AppState {
         self.secret_dump.as_ref().map(|f| f()).unwrap_or_default()
     }
 
+    /// e2e only: forget every secret and preference, as on a fresh install.
+    pub async fn e2e_reset(&self) -> CmdResult<()> {
+        for (k, _) in self.secret_entries() {
+            let _ = self.secrets.delete(&k);
+        }
+        for k in [ta_core::keys::ACTIVE_ACCOUNT, ta_core::keys::ACTIVE_PROFILE] {
+            let _ = self.prefs.delete(k);
+        }
+        self.reload().await
+    }
+
     pub fn provisioning_status(&self) -> ProvisioningStatus {
         let stored = flow::stored_fingerprint(self.secrets.as_ref());
         ProvisioningStatus {

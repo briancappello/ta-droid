@@ -185,3 +185,10 @@ pub async fn submit_flatten(
     let r = Ok(state.submit_flatten(legs).await);
     check(&state, "submit_flatten", r)
 }
+
+/// e2e builds only: reset to a fresh install so a spec can see the gate.
+#[cfg(feature = "e2e")]
+#[tauri::command]
+pub async fn e2e_reset(state: State<'_, AppState>) -> CmdResult<()> {
+    state.e2e_reset().await
+}

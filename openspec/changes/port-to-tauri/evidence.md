@@ -396,3 +396,24 @@
   - `E2E_SPEC=./specs/x.e2e.ts` runs a single spec.
 - The Android back button moved to 6.7 with the rest of the mobile work. The lint rule `react-hooks/set-state-in-effect` is disabled on the poll line only, with the reason given.
 - `mise run verify`: exit 0.
+
+### 5.2 Provisioning gate
+- `components/ProvisioningGate.tsx`: a full-screen form with a masked field and Unlock.
+  - While Argon2 runs: "Unlocking…", the field and button are disabled, a busy note is shown, and a second submit is ignored.
+  - After any submit the field is cleared.
+  - Messages: "Incorrect passphrase." (bad-passphrase) and "Could not save credentials to secure storage." (save-failed).
+  - No lockout.
+- An e2e-only command `e2e_reset` clears the e2e secrets and preferences and reloads state, so a spec sees a fresh install.
+- Vitest (5 new; 19 total):
+  - no prompt without a needed blob;
+  - a wrong passphrase clears the field and shows its message;
+  - save-failed has its own message;
+  - three failures then success (no lockout), and accounts load once;
+  - busy state with a double submit sending one `provision`.
+- G3 `e2e/specs/provisioning.e2e.ts`: 4 passing:
+  - reset, then the gate shows and Watchlists is absent;
+  - a wrong passphrase shows "Incorrect passphrase." and an empty field;
+  - the real passphrase (real Argon2 with 256 MiB in the app) opens Watchlists;
+  - **`browser.reloadSession()` starts a new app process on the same data dir, which opens with no prompt.**
+- Screenshots: `provisioning-prompt.png` and `provisioning-wrong.png`.
+- The first full verify after 5.2 failed the 4.4 security spec. Its check "fake-backends saw no `/fatechan/health`" became invalid once the UI started polling health, because the *backend* now calls that path legitimately. The spec now fetches `/fatechan/csp-probe`, a path only a UI request could produce.
