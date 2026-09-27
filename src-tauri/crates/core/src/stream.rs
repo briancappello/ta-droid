@@ -176,7 +176,7 @@ impl State {
             return;
         };
         for (tbks, tx) in self.subs.values() {
-            if tbks.iter().any(|t| *t == m.key) {
+            if tbks.contains(&m.key) {
                 let _ = tx.send(m.clone());
             }
         }

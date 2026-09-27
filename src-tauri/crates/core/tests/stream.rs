@@ -1,6 +1,8 @@
 //! Ported from __tests__/marketstoreStream.test.ts, against an in-process
 //! WebSocket server, plus handshake headers.
 
+#![allow(clippy::result_large_err)] // tungstenite fixes the handshake callback signature.
+
 use std::time::Duration;
 
 use futures::{SinkExt, StreamExt};

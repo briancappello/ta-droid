@@ -219,4 +219,5 @@
   - backoff values;
   - handshake `json` subprotocol plus the `CF-Access-Client-Id` header;
   - no socket before the first subscription.
-- Stable across 8 repeated runs (0.34–0.35 s). `mise run verify`: exit 0.
+- Stable across 8 repeated runs (0.34–0.35 s).
+- Process slip: commit `ff4c83e` was made while `mise run verify` was failing on two clippy lints (`manual_contains` in `stream.rs`, and `result_large_err` on the tungstenite handshake callback in the test, whose signature tungstenite fixes). The follow-up commit fixes both, and `mise run verify` exits 0. From here on, each commit is chained on `mise run verify &&`.
