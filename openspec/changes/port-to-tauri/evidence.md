@@ -545,3 +545,17 @@
   - AAPL legs Sell 10 (Paper) and Sell 3 (Live);
   - **a scripted 422 on Live gives "Live: scripted rejection" with only Live left; Exit all again gives the notice "Flat — Exited 2 account(s)."; fake-backends logged 3 POSTs (Paper once, Live twice), and both Live POSTs carry the same `client_order_id`.**
 - Screenshots: `exit-legs.png`, `exit-partial.png`.
+
+### 5.10 Desktop regression
+- `mise run verify` (G1–G3): exit 0.
+  - **G1:** 176 Rust tests passed, 0 failed, 1 ignored (the Secret Service contract, run separately with `mise run test:secret-service`). Of these, 143 are behavior tests and 33 are ts-rs export tests.
+  - **G2:** binding staleness check, `tsc`, eslint, and **95 vitest tests**.
+  - **G3:** **37 WebdriverIO tests passing across 12 spec files** on WebKitGTK under headless weston, against fake-backends.
+- Totals against the 1.2 baseline (141 RN Jest tests): 143 Rust behavior tests + 95 vitest + 37 e2e = **275 tests**, all passing.
+- Mapping per RN test file:
+  - **Ported in full (Rust):** accountContext, accounts, alpaca, apiHistory, apiQuotes, marketstore, watchlists, encryptCredentials, secretsBackend, provisioning, flatten, indicators, indicatorCalibration (merged into 3 stricter parity tests), marketstoreStream, orderValidation, strategyTagger, techan.
+  - **Ported in full (vitest):** accountPicker, accountsScreen, settingsScreen, appHeader, App, backendContext, book, chartScreen, chartTime, exitScreen, format, ordersScreen, positionsScreen, strategyFilter, watchlistsScreen.
+  - **Not ported (3 cases, none applicable):**
+    - `alpacaDriver` "importing alpaca.ts wires the real driver" and `broker` "driverFor resolves the driver": RN module-wiring checks with no Rust equivalent. Rust dispatch is static, and an unknown broker is a parse error, which is tested.
+    - `orderEntryScreen` "modify mode": the RN screen was unreachable, and order modify is out of scope in the trading spec.
+- Section 5 is complete. The app runs on the Linux desktop with every screen on the Rust backend.

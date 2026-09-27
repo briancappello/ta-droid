@@ -59,7 +59,7 @@ Port each React Native component test to vitest with the same cases. The source 
 - [x] 5.7 Build Positions and Orders with the strategy filter. Verify: the ported cases pass, and an end-to-end spec with one failing account shows the error banner [`positionsScreen`, `ordersScreen`, `strategyFilter`, `book`].
 - [x] 5.8 Build order entry with review and submit (no double submit). Verify: the ported cases pass, and an end-to-end spec places a limit order that `fake-backends` records exactly once [`orderEntryScreen`, `orderValidation`].
 - [x] 5.9 Build the Exit screen. Verify: the ported cases pass, and an end-to-end spec with one failing leg retries and sends only that leg [`exitScreen`].
-- [ ] 5.10 Desktop regression: `mise run verify` (G1–G3). Verify: all gates pass, and the ported test count is at least the 1.2 baseline, with any missing cases explained in `evidence.md`.
+- [x] 5.10 Desktop regression: `mise run verify` (G1–G3). Verify: all gates pass, and the ported test count is at least the 1.2 baseline, with any missing cases explained in `evidence.md`.
 
 ## 6. Mobile
 
