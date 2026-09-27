@@ -58,5 +58,5 @@ None.
 - **Toolchain:**
   - Rust with the Android and aarch64 targets, the Android NDK (already installed), and `tauri-driver`.
   - `.mise.toml` gains Rust.
-- **Tests:** The 147 existing Jest tests are the behavioral spec. Logic tests move to `cargo test`, and UI tests move to vitest. New end-to-end suites cover desktop, the Android emulator, and postmarketOS under QEMU.
+- **Tests:** The 141 existing Jest tests are the behavioral spec. Logic tests move to `cargo test`, and UI tests move to vitest. New end-to-end suites cover desktop, the Android emulator, and postmarketOS under QEMU.
 - **External systems:** None change. The MarketStore, fa-techan, and Alpaca APIs are used as they are today. `docs/superpowers/contracts/fe-fa-techan-contract.md` is still in force, except that watchlists now come from MarketStore (already true in the code).

@@ -2,7 +2,7 @@
 
 See proposal.md (Why) for the motivation. The current state that shapes this design:
 
-- The app is about 4.9k lines of TypeScript in `src/`, with 147 Jest tests in `__tests__/`. The only native code is the stock `MainActivity.kt` and `MainApplication.kt`.
+- The app is about 4.9k lines of TypeScript in `src/`, with 141 Jest tests in `__tests__/`. The only native code is the stock `MainActivity.kt` and `MainApplication.kt`.
 - Configuration is baked in at build time through `react-native-config` (`.env`): `ACCOUNTS_JSON`, `CREDENTIALS_BLOB_JSON`, `API_BASE_URL`, `MARKETSTORE_BASE_URL`, and `MARKETSTORE_AUTH_TOKEN`.
 - The chart runs `lightweight-charts` 4.2.3 inside a WebView, driven by an inline HTML page and `postMessage` (`src/screens/ChartScreen.tsx`).
 - The backends are not production-ready. There is a localhost MarketStore replica and taichi's MarketStore (the source of truth). The end state is a homelab reached through a Cloudflare Tunnel or Tailscale. The homelab is not built yet.
