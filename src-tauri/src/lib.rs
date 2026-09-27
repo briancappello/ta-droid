@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod state;
 mod stores;
+pub mod trading;
 
 use ta_core::config::AppConfig;
 use tauri::Manager;
@@ -40,6 +41,13 @@ pub fn run() {
             commands::subscribe_bars,
             commands::subscribe_watchlist,
             commands::unsubscribe,
+            commands::positions,
+            commands::orders,
+            commands::symbol_holdings,
+            commands::validate_order,
+            commands::place_order,
+            commands::flatten_legs,
+            commands::submit_flatten,
         ])
         .run(tauri::generate_context!())
         .expect("error while running the ta-droid application");

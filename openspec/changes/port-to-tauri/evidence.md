@@ -328,3 +328,22 @@
     - **dropping one receiver shrinks the server's subscribe set from [AAPL, MSFT] to [AAPL]**, then an idempotent `unsubscribe` takes it to [];
     - a profile switch keeps delivering to the same sink over a new socket.
 - Bindings regenerated (`LiveBar`). `mise run verify`: exit 0.
+
+### 4.3 Trading commands
+- `src-tauri/src/trading.rs` adds these `AppState` operations:
+  - `positions` and `orders` return `AccountBook<T> { account: AccountView, rows: Tagged<T>[], error }` per account, in config order. The broker calls and the fa-techan tagger load in parallel. Orders are filtered to working statuses.
+  - `symbol_holdings` returns `HoldingView` for the chart strip.
+  - `place_order` **validates again** on the backend, then sends through the active account.
+  - `flatten_legs` and `submit_flatten`.
+  - A test-only `set_broker_timeout`.
+- Commands: `positions`, `orders`, `symbol_holdings`, `validate_order` (live form feedback), `place_order`, `flatten_legs`, `submit_flatten`.
+- The generic ts-rs types `AccountBook<T>` and `Tagged<T>`, plus `HoldingView`, are in the regenerated bindings.
+- `cargo test -p ta-droid --test trading`: 7 passed:
+  - tagged grouping (PA1TEST/AAPL = Momentum; everything else Unattributed), with no secrets in the JSON;
+  - **a 401 on one account gives that account's error and no rows, and the other account is unaffected**;
+  - fa-techan down makes everything Unattributed;
+  - orders are open-only (a cancelled seed order drops out);
+  - an invalid form or unknown account sends nothing, and a valid one sends **exactly one** clean POST (uppercased symbol, no stop price, `ta-` id);
+  - **401, 429, 422, and timeout** each give their spec message;
+  - flatten over both holders, then a retry of only the failed leg (3 POSTs in total).
+- `mise run verify`: exit 0.

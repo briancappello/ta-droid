@@ -9,7 +9,12 @@ use ta_provision::flow::Outcome;
 use tauri::State;
 use tauri::ipc::Channel;
 
+use ta_core::broker::Order;
+use ta_core::broker::flatten::{Leg, SubmitOutcome};
+use ta_core::broker::validate::{self, OrderForm};
+
 use crate::state::{AccountsView, AppState, CmdResult, ProfilesView, ProvisioningStatus};
+use crate::trading::{HoldingView, OrdersBook, PositionsBook};
 
 #[tauri::command]
 pub fn provisioning_status(state: State<'_, AppState>) -> ProvisioningStatus {
@@ -102,4 +107,53 @@ pub async fn subscribe_watchlist(
 #[tauri::command]
 pub fn unsubscribe(state: State<'_, AppState>, id: u64) {
     state.unsubscribe(id);
+}
+
+#[tauri::command]
+pub async fn positions(state: State<'_, AppState>) -> CmdResult<PositionsBook> {
+    Ok(state.positions().await)
+}
+
+#[tauri::command]
+pub async fn orders(state: State<'_, AppState>) -> CmdResult<OrdersBook> {
+    Ok(state.orders().await)
+}
+
+#[tauri::command]
+pub async fn symbol_holdings(
+    state: State<'_, AppState>,
+    symbol: String,
+) -> CmdResult<Vec<HoldingView>> {
+    Ok(state.symbol_holdings(&symbol).await)
+}
+
+/// Live form feedback; the same checks run again in `place_order`.
+#[tauri::command]
+pub fn validate_order(form: OrderForm) -> Vec<String> {
+    validate::validate(&form)
+        .into_iter()
+        .map(str::to_owned)
+        .collect()
+}
+
+#[tauri::command]
+pub async fn place_order(
+    state: State<'_, AppState>,
+    account_id: String,
+    form: OrderForm,
+) -> CmdResult<Order> {
+    state.place_order(&account_id, &form).await
+}
+
+#[tauri::command]
+pub async fn flatten_legs(state: State<'_, AppState>, symbol: String) -> CmdResult<Vec<Leg>> {
+    Ok(state.flatten_legs(&symbol).await)
+}
+
+#[tauri::command]
+pub async fn submit_flatten(
+    state: State<'_, AppState>,
+    legs: Vec<Leg>,
+) -> CmdResult<SubmitOutcome> {
+    Ok(state.submit_flatten(legs).await)
 }

@@ -4302,6 +4302,7 @@ name = "ta-droid"
 version = "0.1.0"
 dependencies = [
  "fake-backends",
+ "futures",
  "reqwest",
  "serde",
  "serde_json",
