@@ -139,3 +139,16 @@
   - Debug output contains no key material;
   - the CLI round trip prints no key, secret, header value, or passphrase, and `check` with a wrong passphrase fails.
 - Argon2 at 256 MiB is too slow unoptimized, so `argon2` and `blake2` build at opt-level 3 in the dev profile. The test binary runs in about 1.5 s. `mise run verify`: exit 0.
+
+### 3.4 Provisioning flow
+- `ta_core::keys` names the store entries: `cred.<broker>:<id>` (JSON `{key, secret}`), `backend.<profile>.<header-lowercase>`, `creds.fingerprint`, and the preference keys `active.account` and `active.profile`.
+- `ta_provision::flow`:
+  - `action(shipped, stored)` provisions only when a blob ships with a fingerprint other than the stored one.
+  - `run` decrypts, saves every credential and backend header, and stores the fingerprint **last**. It returns `Ok`, `BadPassphrase`, or `SaveFailed`, and the outcome carries no payload.
+  - `stored_fingerprint` treats an unreadable store as "none".
+- `cargo test -p ta-provision --test flow`: 9 passed:
+  - the 6 ported `provisioning.test.ts` cases, plus no-blob skip (from `accountContext`);
+  - a save failure on either a credential or a header write leaves no fingerprint (the fingerprint key is never written);
+  - outcomes serialize as a bare tag;
+  - the real crypto end to end on the Node fixture (wrong, then right passphrase).
+- No-secrets-in-logs: the flow has no logging, and its only outputs are the payload-free `Outcome` tag and the store writes. Key material is zeroized, and `Debug` redacts it (3.3). `mise run verify`: exit 0.

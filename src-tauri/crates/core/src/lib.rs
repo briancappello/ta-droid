@@ -2,4 +2,5 @@
 //! is tested with plain `cargo test`.
 
 pub mod config;
+pub mod keys;
 pub mod store;

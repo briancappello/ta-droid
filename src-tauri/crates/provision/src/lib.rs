@@ -8,6 +8,8 @@
 //! - encoding: standard base64 with padding
 //! - fingerprint: lowercase hex sha256 of the ciphertext's base64 text
 
+pub mod flow;
+
 use argon2::{Algorithm, Argon2, Params, Version};
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as B64;
