@@ -7,3 +7,42 @@ rust = { version = "1.96.0", components = "clippy,rustfmt", targets = "aarch64-l
 [env]
 ANDROID_HOME = "{{env.HOME}}/Android/Sdk"
 NDK_HOME = "{{env.HOME}}/Android/Sdk/ndk/27.1.12297006"
+
+# Verification gates for the Tauri port (openspec/changes/port-to-tauri, design D11).
+# `verify` runs G1-G4 on every task; `verify:slow` runs G5-G6 per task group.
+
+[tasks."setup:ui"]
+description = "Install the UI dependencies from the lockfile"
+dir = "ui"
+run = "pnpm install --frozen-lockfile"
+
+[tasks."build:ui"]
+description = "Build the UI bundle that the Tauri app embeds"
+dir = "ui"
+depends = ["setup:ui"]
+run = "pnpm exec vite build"
+
+[tasks."verify:core"]
+description = "G1: Rust format, lint, and tests"
+dir = "src-tauri"
+depends = ["build:ui"]
+run = [
+  "cargo fmt --all --check",
+  "cargo clippy --workspace --all-targets --all-features -- -D warnings",
+  "cargo test --workspace --all-features",
+]
+
+[tasks."verify:ui"]
+description = "G2: UI typecheck, lint, and tests"
+dir = "ui"
+depends = ["setup:ui"]
+run = ["pnpm typecheck", "pnpm lint", "pnpm test"]
+
+[tasks.verify]
+description = "Fast gates: G1-G4"
+depends = ["verify:core", "verify:ui"]
+run = "echo 'verify: all gates passed'"
+
+[tasks."verify:slow"]
+description = "Slow gates: G5-G6"
+run = "echo 'verify:slow: no slow gates wired yet'"

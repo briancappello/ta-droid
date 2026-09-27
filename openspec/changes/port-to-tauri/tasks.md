@@ -11,7 +11,7 @@ Tasks marked **Operator** need the human. They are grouped into the start batch 
 - [x] 1.2 Record the baseline: `pnpm test` pass, fail, and skip counts on the React Native code. Verify: the counts are in `evidence.md`.
 - [x] 1.3 Commit a provisioning test vector: a blob and passphrase made by `scripts/encrypt-credentials.mjs` from dummy credentials, stored under `src-tauri/crates/provision/tests/fixtures/`. Verify: the Node script decrypts the fixture back to the dummy credentials.
 - [x] 1.4 Scaffold the `src-tauri/` workspace (D2) and the Vite React TypeScript app in `ui/`, with identifier `com.briancappello.ta-droid` (Tauri maps it to the Android package `com.briancappello.ta_droid`) and a 412×915 development window. Verify: `cargo tauri build --debug` succeeds and the binary starts.
-- [ ] 1.5 Add the `mise` tasks `verify` (G1–G4) and `verify:slow` (G5–G6), with G1 and G2 wired to the empty workspace. Verify: `mise run verify` exits 0 with the gates that exist so far.
+- [x] 1.5 Add the `mise` tasks `verify` (G1–G4) and `verify:slow` (G5–G6), with G1 and G2 wired to the empty workspace. Verify: `mise run verify` exits 0 with the gates that exist so far.
 
 ## 2. Verification harness and platform spikes
 
