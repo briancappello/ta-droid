@@ -39,3 +39,10 @@
 - `.mise.toml` tasks: `setup:ui`, `build:ui`, `verify:core` (G1: `cargo fmt --check`, `clippy -D warnings`, `cargo test` for the workspace with all features), `verify:ui` (G2: typecheck, lint, vitest), `verify` (currently G1 and G2), and `verify:slow` (placeholder). G3–G6 are added by tasks 2.2–2.5.
 - `verify:core` depends on `build:ui`, because `tauri::generate_context!` needs `ui/dist` at compile time.
 - `mise run verify`: exit 0.
+
+## 2. Verification harness and platform spikes
+
+### 2.1 fake-backends
+- `src-tauri/crates/fake-backends` (axum 0.8): a lib plus a `fake-backends [--addr] [--log]` binary. It is a single listener with the prefixes `/marketstore`, `/fatechan`, `/alpaca`, and `/__control`, so one `adb reverse` or `ssh -R` tunnel exposes all of it.
+- Requests are recorded with method, path, query, and headers, both in memory (`GET`/`DELETE /__control/requests`) and optionally as JSONL. Control calls are not recorded.
+- `cargo test -p fake-backends`: 3 passed (both health endpoints return 200; the log with headers and query can be read back and cleared; the JSONL file gets one line per request, including a 404). `mise run verify:core` passes.

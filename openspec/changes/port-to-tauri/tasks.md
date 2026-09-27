@@ -15,7 +15,7 @@ Tasks marked **Operator** need the human. They are grouped into the start batch 
 
 ## 2. Verification harness and platform spikes
 
-- [ ] 2.1 Create the `fake-backends` crate. It serves `/v1/health` and `/health` and writes a JSON request log. Verify: `cargo test -p fake-backends` passes, including a test that reads back the request log.
+- [x] 2.1 Create the `fake-backends` crate. It serves `/v1/health` and `/health` and writes a JSON request log. Verify: `cargo test -p fake-backends` passes, including a test that reads back the request log.
 - [ ] 2.2 Build G3. A script starts `weston --backend=headless`, records its PID in a pidfile, and runs `tauri-driver` with a WebdriverIO smoke spec: the app launches, and a screenshot goes to `artifacts/g3/`. Verify: `mise run e2e:desktop` passes twice in a row, and no weston or driver process is left afterwards (checked by pidfile).
 - [ ] 2.3 Build G4. A script boots `Pixel_8` headless (PID recorded), waits for `sys.boot_completed`, installs the debug x86_64 APK, applies `adb reverse` for `fake-backends`, and runs the same smoke spec through Appium UiAutomator2 in the WEBVIEW context. Verify: `mise run e2e:android` passes, a screenshot is in `artifacts/g4/`, and the emulator stops on exit.
 - [ ] 2.4 Build the G5 VM. Copy the exported pmOS image to `~/.local/share/ta-droid/pmos/`, boot it with `qemu-system-aarch64` (PID recorded, ssh on host port 2222), install the agent's ssh key and `grim`, and capture a Phosh screenshot. Verify: `ssh` runs `uname -m` and prints `aarch64` without a password, and a screenshot is in `artifacts/g5/`.
