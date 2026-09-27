@@ -43,7 +43,7 @@ Port each React Native test to Rust with the same cases. The source test files a
 - [x] 4.1 Add the app state and the commands for provisioning, accounts, profiles, and health, with `ts-rs` type generation and a staleness check in G2. Verify: command tests pass, and changing a DTO without regenerating fails `mise run verify`.
 - [x] 4.2 Add the market-data commands: history, quotes, and watchlists. Bar and watchlist streams go over `Channel`s, and the backend unsubscribes when a channel is dropped. Verify: an integration test against `fake-backends` shows the subscribe set shrinking after a channel is dropped.
 - [x] 4.3 Add the trading commands: positions, orders, validate, place, flatten legs, and submit flatten. Verify: integration tests against the `fake-backends` Alpaca API pass, including the 401, 429, 422, and timeout messages.
-- [ ] 4.4 Lock down the WebView (D10): the CSP, the capability list, and no UI network plugins. Verify: a G3 spec shows that a UI `fetch` to an external URL is blocked.
+- [x] 4.4 Lock down the WebView (D10): the CSP, the capability list, and no UI network plugins. Verify: a G3 spec shows that a UI `fetch` to an external URL is blocked.
 - [ ] 4.5 Add the secret-leak guard: in `e2e` builds, IPC responses and events are scanned for the values provisioned into `fake-backends`. Verify: a deliberately leaking test command fails the guard in G3, and the command is then removed.
 
 ## 5. UI (`ui/`)

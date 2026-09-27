@@ -15,7 +15,7 @@ export ANDROID_SERIAL="emulator-$EMU_PORT"
 # The app always talks to 127.0.0.1:8787 on the device. On the host,
 # fake-backends uses its own port so G3 and G4 can run at the same time.
 FAKE_PORT=8787
-FAKE_HOST_PORT="${FAKE_HOST_PORT:-8788}"
+export FAKE_HOST_PORT="${FAKE_HOST_PORT:-8788}"
 export APPIUM_PORT="${APPIUM_PORT:-4723}"
 export APPIUM_HOME="$ROOT/e2e/.appium"
 : "${ANDROID_HOME:?ANDROID_HOME must be set (mise sets it)}"

@@ -9,7 +9,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 RUN="$ROOT/artifacts/g3/run"
 SOCKET="ta-droid-e2e-$$"
-FAKE_ADDR="${FAKE_ADDR:-127.0.0.1:8787}"
+export FAKE_ADDR="${FAKE_ADDR:-127.0.0.1:8787}"
 DRIVER_PORT="${TAURI_DRIVER_PORT:-4444}"
 mkdir -p "$RUN"
 # A target dir of its own: `cargo test` in G1 rebuilds target/debug/ta-droid

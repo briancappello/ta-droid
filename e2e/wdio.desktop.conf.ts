@@ -5,6 +5,7 @@ import { artifactsDir, shared } from './support/common.ts';
 // tauri-driver (started by scripts/e2e-desktop.sh) proxies to WebKitWebDriver.
 process.env.E2E_ARTIFACTS_DIR = artifactsDir('g3');
 process.env.E2E_PLATFORM = 'desktop';
+process.env.E2E_FAKE_URL ??= `http://${process.env.FAKE_ADDR ?? '127.0.0.1:8787'}`;
 
 const application =
   process.env.TA_DROID_APP ??

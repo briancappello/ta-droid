@@ -6,6 +6,7 @@ import { artifactsDir, shared } from './support/common.ts';
 // the app's WebView context, so they are the same specs as on desktop.
 process.env.E2E_ARTIFACTS_DIR = artifactsDir('g4');
 process.env.E2E_PLATFORM = 'android';
+process.env.E2E_FAKE_URL ??= `http://127.0.0.1:${process.env.FAKE_HOST_PORT ?? '8788'}`;
 
 const app =
   process.env.TA_DROID_APK ??

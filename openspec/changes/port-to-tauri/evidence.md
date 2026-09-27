@@ -347,3 +347,15 @@
   - **401, 429, 422, and timeout** each give their spec message;
   - flatten over both holders, then a retry of only the failed leg (3 POSTs in total).
 - `mise run verify`: exit 0.
+
+### 4.4 Locked-down WebView
+- `tauri.conf.json`:
+  - The CSP allows only the app and IPC: `default-src 'self'; connect-src ipc: http://ipc.localhost; script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`, plus inline styles and data images.
+  - `devCsp` is the same, plus the Vite HMR socket `ws://localhost:5173`.
+  - `freezePrototype: true`.
+- Capabilities: the main window has only `core:default`. No HTTP, filesystem, shell, or other plugins are installed.
+- New G3 spec `e2e/specs/security.e2e.ts`, shared with G4 (the fake-backends control URL comes from `E2E_FAKE_URL`):
+  - UI `fetch('http://127.0.0.1:8787/fatechan/health')` is **rejected, and fake-backends logs no such request**;
+  - `invoke('health')` over IPC still returns `{marketstore: up, fatechan: up}`.
+- Negative control: adding `http://127.0.0.1:8787` to `connect-src` made the block test fail (✖) while the IPC test passed. The config was restored afterwards.
+- `mise run e2e:desktop`: 3 passing across 2 spec files.
