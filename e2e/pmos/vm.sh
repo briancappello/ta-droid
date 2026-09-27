@@ -12,7 +12,7 @@
 #
 # State lives in ~/.local/share/ta-droid/pmos (image, OVMF vars, VM-only key).
 # PMOS_DISPLAY=gtk opens a window for manual QA (default: none, headless).
-# Stop a windowed VM with `vm.sh stop`: closing the window is a hard power-off.
+# The window cannot be closed (a hard power-off); stop the VM with `vm.sh stop`.
 set -euo pipefail
 
 D="${PMOS_DIR:-$HOME/.local/share/ta-droid/pmos}"
@@ -20,7 +20,8 @@ PORT="${PMOS_SSH_PORT:-2222}"
 USER_="${PMOS_USER:-pmos}"
 OVMF_CODE="${PMOS_OVMF_CODE:-/usr/share/edk2/x64/OVMF_CODE.4m.fd}"
 DISPLAY_OPT="${PMOS_DISPLAY:-none}"
-[[ $DISPLAY_OPT == gtk ]] && DISPLAY_OPT="gtk,zoom-to-fit=on"
+# window-close=off: closing the window would be a hard power-off.
+[[ $DISPLAY_OPT == gtk ]] && DISPLAY_OPT="gtk,zoom-to-fit=on,window-close=off"
 PIDFILE="$D/qemu.pid"
 SSH_OPTS=(-i "$D/id_ed25519" -o IdentitiesOnly=yes -o BatchMode=yes
   -o UserKnownHostsFile="$D/known_hosts" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5)
