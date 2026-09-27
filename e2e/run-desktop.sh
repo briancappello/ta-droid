@@ -12,6 +12,11 @@ SOCKET="ta-droid-e2e-$$"
 FAKE_ADDR="${FAKE_ADDR:-127.0.0.1:8787}"
 DRIVER_PORT="${TAURI_DRIVER_PORT:-4444}"
 mkdir -p "$RUN"
+# A target dir of its own: `cargo test` in G1 rebuilds target/debug/ta-droid
+# without Tauri's custom protocol (a blank dev-URL app), and running in
+# parallel it could replace the binary under test.
+export CARGO_TARGET_DIR="$ROOT/src-tauri/target/e2e"
+export TA_DROID_APP="$CARGO_TARGET_DIR/debug/ta-droid"
 : "${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"
 export XDG_RUNTIME_DIR
 
@@ -52,7 +57,7 @@ weston --backend=headless --socket="$SOCKET" --idle-time=0 >"$RUN/weston.log" 2>
 echo $! >"$RUN/weston.pid"
 for _ in $(seq 1 20); do [[ -S $XDG_RUNTIME_DIR/$SOCKET ]] && break; sleep 0.5; done
 
-"$ROOT/src-tauri/target/debug/fake-backends" --addr "$FAKE_ADDR" --log "$RUN/requests.jsonl" \
+"$CARGO_TARGET_DIR/debug/fake-backends" --addr "$FAKE_ADDR" --log "$RUN/requests.jsonl" \
   >"$RUN/fake-backends.log" 2>&1 &
 echo $! >"$RUN/fake-backends.pid"
 wait_port "$FAKE_ADDR" 20

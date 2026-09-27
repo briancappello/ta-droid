@@ -21,6 +21,7 @@ export APPIUM_HOME="$ROOT/e2e/.appium"
 : "${ANDROID_HOME:?ANDROID_HOME must be set (mise sets it)}"
 ADB="$ANDROID_HOME/platform-tools/adb"
 mkdir -p "$RUN"
+export CARGO_TARGET_DIR="$ROOT/src-tauri/target/e2e"
 
 stop() {
   "$ADB" -s "$ANDROID_SERIAL" emu kill >/dev/null 2>&1 || true
@@ -71,7 +72,7 @@ for _ in $(seq 1 180); do
 done
 [[ "$("$ADB" -s "$ANDROID_SERIAL" shell getprop sys.boot_completed | tr -d '\r')" == 1 ]]
 
-"$ROOT/src-tauri/target/debug/fake-backends" --addr "127.0.0.1:$FAKE_HOST_PORT" \
+"$CARGO_TARGET_DIR/debug/fake-backends" --addr "127.0.0.1:$FAKE_HOST_PORT" \
   --log "$RUN/requests.jsonl" >"$RUN/fake-backends.log" 2>&1 &
 echo $! >"$RUN/fake-backends.pid"
 wait_port "127.0.0.1:$FAKE_HOST_PORT" 20

@@ -306,3 +306,8 @@
   - active account switches, rejects unknown ids, and persists across a new `AppState`;
   - profile switch persists, `e2e-auth` sends the provisioned `CF-Access-Client-Secret` on health, and the profile view has no header values.
 - `mise run verify`: exit 0.
+
+### G3 flake fix (found during 4.2)
+- Symptom: `mise run verify` failed once, with the app root not displayed after 20 s; `mise run e2e:desktop` alone passed.
+- Root cause: in G1, `cargo test --workspace --all-features` rebuilds `target/debug/ta-droid` without Tauri's custom protocol, giving a blank app that points at the dev URL. It runs in parallel with G3, so it could replace the binary G3 had just built with `cargo tauri build`.
+- Fix: `run-desktop.sh` and `run-android.sh` build into their own `CARGO_TARGET_DIR=src-tauri/target/e2e`, and G3 launches that binary through `TA_DROID_APP`. Two consecutive full `mise run verify` runs then passed.
