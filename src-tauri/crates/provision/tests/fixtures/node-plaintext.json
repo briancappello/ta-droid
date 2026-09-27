@@ -1,0 +1,22 @@
+{
+  "credentials": [
+    {
+      "broker": "alpaca",
+      "id": "PA1TEST",
+      "key": "PKTESTKEY0000001",
+      "secret": "test-secret-0001"
+    },
+    {
+      "broker": "alpaca",
+      "id": "LV1TEST",
+      "key": "AKTESTKEY0000002",
+      "secret": "test-secret-0002"
+    }
+  ],
+  "backends": {
+    "remote": {
+      "CF-Access-Client-Id": "test-client-id",
+      "CF-Access-Client-Secret": "test-client-secret"
+    }
+  }
+}
