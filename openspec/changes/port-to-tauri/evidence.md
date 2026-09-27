@@ -240,3 +240,14 @@
 ### 3.11 Order validation
 - `broker::validate`: `OrderForm` (the raw form text) with `validate`, which returns the spec messages in display order, and `to_request`, which trims and uppercases the symbol, sends qty *or* notional, adds only the price fields the type needs, and always sends `extended_hours`. Positive means it parses as a finite f64 greater than 0 after trimming, which matches JS `Number()` except for hex literals.
 - `cargo test -p ta-core --test order_validation`: 11 passed. That covers the 9 ported cases (stop-limit now asserts the exact two messages), plus the notional error and the stop-limit/trailing field selection. The qty cases also cover "", "-1", "abc", and "inf".
+
+### 3.12 Flatten
+- `broker::flatten`:
+  - `holdings` loads positions in parallel and skips a failing account and accounts without the symbol.
+  - `plan` makes one market DAY leg per holding, on the opposite side, for |qty|.
+  - `submit` sends the legs in parallel and returns `SubmitOutcome { results, remaining, all_ok }`, where `remaining` is exactly the failed legs.
+  - A `Leg` carries the account id, name, and paper flag, plus the request. It has **no secrets**; the backend resolves the account on submit.
+- Addition beyond the RN app: `plan` assigns each leg its `client_order_id` up front, and a retry resends it unchanged. If a "failed" leg actually reached Alpaca (for example it timed out after acceptance), Alpaca rejects the duplicate id instead of opening a second order. This supports the spec's no-duplicate intent and adds no new behavior.
+- `cargo test -p ta-core --test flatten`: 4 passed:
+  - ported: the plan's side and qty, holdings isolating a failing account, per-leg results, all-ok with no `suppressed`;
+  - new: 3 legs with 1 failing, then a retry of `remaining`, makes **4 POSTs in total (only the failed leg resent)**, and the retry carries the same `client_order_id`.

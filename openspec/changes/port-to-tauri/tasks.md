@@ -34,7 +34,7 @@ Port each React Native test to Rust with the same cases. The source test files a
 - [x] 3.9 MarketStore stream (D4): one socket, a reference-counted union, the drop rules, backoff with reset, resubscribe on reopen, and profile headers on the handshake. Verify: the 8 ported cases pass against an in-process WS server, plus a handshake-header test [`marketstoreStream`].
 - [x] 3.10 Alpaca driver: the auth headers, no redirects, the 30 s timeout, no order retry, the `ta-` client order id, 204 handling, and the error mapping. Verify: the ported cases pass [`alpaca`, `alpacaDriver`, `broker`].
 - [x] 3.11 Order validation and request building. Verify: the 9 ported cases pass [`orderValidation`].
-- [ ] 3.12 Flatten: finding the legs, parallel submit, per-leg results, and retrying only the legs that failed. Verify: the ported cases pass, plus a new test that a retry after a partial failure sends only the failed legs [`flatten`].
+- [x] 3.12 Flatten: finding the legs, parallel submit, per-leg results, and retrying only the legs that failed. Verify: the ported cases pass, plus a new test that a retry after a partial failure sends only the failed legs [`flatten`].
 - [ ] 3.13 fa-techan client and strategy tagging: safe empty results and the case-sensitive join. Verify: the ported cases pass, plus a test that a 500, a timeout, and a malformed body each give `[]` [`techan`, `strategyTagger`].
 - [ ] 3.14 Complete `fake-backends`: MarketStore fixtures (bars, quotes, watchlists, WS bars and watchlist updates), fa-techan strategies, an Alpaca paper API, and scripted failures (down, 401, 429, 422, slow). Verify: `cargo test -p fake-backends` covers each failure mode.
 
