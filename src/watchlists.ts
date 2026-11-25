@@ -3,23 +3,61 @@ import { getWatchlists, getWatchlist } from './marketstore';
 export type Watchlist = { id: string; name: string };
 
 // MarketStore watchlist-plugin keys -> friendly labels (the labels fa-techan
-// used to return). Unknown keys fall back to the raw key.
+// used to return). Unknown keys fall back to the raw key. Bare names use the
+// session basis and exist in every session; NAME_TRADITIONAL (previous day's
+// close) exists only in the regular session. GAP_* and SMA_CROSS_* are
+// traditional by definition, so they are published only as *_TRADITIONAL.
 const LABELS: Record<string, string> = {
   PCT_CHANGE_UP: 'Top Gainers',
   PCT_CHANGE_DOWN: 'Top Losers',
+  VOLUME_UP: 'Volume Gainers',
+  VOLUME_DOWN: 'Volume Losers',
   MOMENTUM: 'Momentum',
   RELATIVE_VOLUME: 'Relative Volume',
-  GAP_UP: 'Gap Up',
-  GAP_DOWN: 'Gap Down',
-  SMA_CROSS_UP: 'SMA Cross Up',
-  SMA_CROSS_DOWN: 'SMA Cross Down',
   INDUSTRY_AGGREGATE: 'Industry Aggregate',
   SECTOR_AGGREGATE: 'Sector Aggregate',
+  PCT_CHANGE_UP_TRADITIONAL: 'Top Gainers (Traditional)',
+  PCT_CHANGE_DOWN_TRADITIONAL: 'Top Losers (Traditional)',
+  VOLUME_UP_TRADITIONAL: 'Volume Gainers (Traditional)',
+  VOLUME_DOWN_TRADITIONAL: 'Volume Losers (Traditional)',
+  MOMENTUM_TRADITIONAL: 'Momentum (Traditional)',
+  RELATIVE_VOLUME_TRADITIONAL: 'Relative Volume (Traditional)',
+  INDUSTRY_AGGREGATE_TRADITIONAL: 'Industry Aggregate (Traditional)',
+  SECTOR_AGGREGATE_TRADITIONAL: 'Sector Aggregate (Traditional)',
+  GAP_UP_TRADITIONAL: 'Gap Up',
+  GAP_DOWN_TRADITIONAL: 'Gap Down',
+  SMA_CROSS_UP_TRADITIONAL: 'SMA Cross Up',
+  SMA_CROSS_DOWN_TRADITIONAL: 'SMA Cross Down',
 };
+
+const TRADITIONAL = '_TRADITIONAL';
+
+// Lists whose plain label means "today's move" to the user. During the
+// regular session their traditional variant takes the plain label and comes
+// first; the bare (session-basis) list is relabeled as the alternative.
+const DEFAULT_TRADITIONAL = ['PCT_CHANGE_UP', 'PCT_CHANGE_DOWN'];
 
 export async function fetchWatchlists(): Promise<Watchlist[]> {
   const { watchlists } = await getWatchlists();
-  return watchlists.map(w => ({ id: w.name, name: LABELS[w.name] ?? w.name }));
+  const names = new Set(watchlists.map(w => w.name));
+  const swapped = (n: string) =>
+    DEFAULT_TRADITIONAL.includes(n) && names.has(n + TRADITIONAL);
+  const out: Watchlist[] = [];
+  for (const { name } of watchlists) {
+    if (
+      name.endsWith(TRADITIONAL) &&
+      swapped(name.slice(0, -TRADITIONAL.length))
+    ) {
+      continue;
+    }
+    if (swapped(name)) {
+      out.push({ id: name + TRADITIONAL, name: LABELS[name] });
+      out.push({ id: name, name: `${LABELS[name]} (Session)` });
+      continue;
+    }
+    out.push({ id: name, name: LABELS[name] ?? name });
+  }
+  return out;
 }
 
 export type WatchRow = {

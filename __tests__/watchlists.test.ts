@@ -24,6 +24,96 @@ test('fetchWatchlists maps MarketStore names to {id,name} with friendly labels',
   ]);
 });
 
+const listing = (names: string[]) =>
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      watchlists: names.map(name => ({ name, entries: [] })),
+    }),
+  } as unknown as Response);
+
+test('fetchWatchlists labels the session-era lists outside the regular session', async () => {
+  // Premarket/afterhours: only bare lists, sorted by name as the server does.
+  listing([
+    'INDUSTRY_AGGREGATE',
+    'MOMENTUM',
+    'PCT_CHANGE_DOWN',
+    'PCT_CHANGE_UP',
+    'RELATIVE_VOLUME',
+    'SECTOR_AGGREGATE',
+    'VOLUME_DOWN',
+    'VOLUME_UP',
+  ]);
+  expect(await fetchWatchlists()).toEqual([
+    { id: 'INDUSTRY_AGGREGATE', name: 'Industry Aggregate' },
+    { id: 'MOMENTUM', name: 'Momentum' },
+    { id: 'PCT_CHANGE_DOWN', name: 'Top Losers' },
+    { id: 'PCT_CHANGE_UP', name: 'Top Gainers' },
+    { id: 'RELATIVE_VOLUME', name: 'Relative Volume' },
+    { id: 'SECTOR_AGGREGATE', name: 'Sector Aggregate' },
+    { id: 'VOLUME_DOWN', name: 'Volume Losers' },
+    { id: 'VOLUME_UP', name: 'Volume Gainers' },
+  ]);
+});
+
+test('fetchWatchlists: in the regular session Top Gainers/Losers are the traditional lists', async () => {
+  listing([
+    'GAP_DOWN_TRADITIONAL',
+    'GAP_UP_TRADITIONAL',
+    'INDUSTRY_AGGREGATE',
+    'INDUSTRY_AGGREGATE_TRADITIONAL',
+    'MOMENTUM',
+    'MOMENTUM_TRADITIONAL',
+    'PCT_CHANGE_DOWN',
+    'PCT_CHANGE_DOWN_TRADITIONAL',
+    'PCT_CHANGE_UP',
+    'PCT_CHANGE_UP_TRADITIONAL',
+    'RELATIVE_VOLUME',
+    'RELATIVE_VOLUME_TRADITIONAL',
+    'SECTOR_AGGREGATE',
+    'SECTOR_AGGREGATE_TRADITIONAL',
+    'SMA_CROSS_DOWN_TRADITIONAL',
+    'SMA_CROSS_UP_TRADITIONAL',
+    'VOLUME_DOWN',
+    'VOLUME_DOWN_TRADITIONAL',
+    'VOLUME_UP',
+    'VOLUME_UP_TRADITIONAL',
+  ]);
+  expect(await fetchWatchlists()).toEqual([
+    { id: 'GAP_DOWN_TRADITIONAL', name: 'Gap Down' },
+    { id: 'GAP_UP_TRADITIONAL', name: 'Gap Up' },
+    { id: 'INDUSTRY_AGGREGATE', name: 'Industry Aggregate' },
+    { id: 'INDUSTRY_AGGREGATE_TRADITIONAL', name: 'Industry Aggregate (Traditional)' },
+    { id: 'MOMENTUM', name: 'Momentum' },
+    { id: 'MOMENTUM_TRADITIONAL', name: 'Momentum (Traditional)' },
+    // The plain label goes to the traditional list, which comes first.
+    { id: 'PCT_CHANGE_DOWN_TRADITIONAL', name: 'Top Losers' },
+    { id: 'PCT_CHANGE_DOWN', name: 'Top Losers (Session)' },
+    { id: 'PCT_CHANGE_UP_TRADITIONAL', name: 'Top Gainers' },
+    { id: 'PCT_CHANGE_UP', name: 'Top Gainers (Session)' },
+    { id: 'RELATIVE_VOLUME', name: 'Relative Volume' },
+    { id: 'RELATIVE_VOLUME_TRADITIONAL', name: 'Relative Volume (Traditional)' },
+    { id: 'SECTOR_AGGREGATE', name: 'Sector Aggregate' },
+    { id: 'SECTOR_AGGREGATE_TRADITIONAL', name: 'Sector Aggregate (Traditional)' },
+    { id: 'SMA_CROSS_DOWN_TRADITIONAL', name: 'SMA Cross Down' },
+    { id: 'SMA_CROSS_UP_TRADITIONAL', name: 'SMA Cross Up' },
+    { id: 'VOLUME_DOWN', name: 'Volume Losers' },
+    { id: 'VOLUME_DOWN_TRADITIONAL', name: 'Volume Losers (Traditional)' },
+    { id: 'VOLUME_UP', name: 'Volume Gainers' },
+    { id: 'VOLUME_UP_TRADITIONAL', name: 'Volume Gainers (Traditional)' },
+  ]);
+});
+
+test('fetchWatchlists no longer knows the removed GAP_*/SMA_CROSS_* names', async () => {
+  listing(['GAP_UP', 'GAP_DOWN', 'SMA_CROSS_UP', 'SMA_CROSS_DOWN']);
+  expect(await fetchWatchlists()).toEqual([
+    { id: 'GAP_UP', name: 'GAP_UP' },
+    { id: 'GAP_DOWN', name: 'GAP_DOWN' },
+    { id: 'SMA_CROSS_UP', name: 'SMA_CROSS_UP' },
+    { id: 'SMA_CROSS_DOWN', name: 'SMA_CROSS_DOWN' },
+  ]);
+});
+
 test('toWatchRow: price colors vs prior_close; change is intraday % from open', () => {
   // Gap-down that recovered: below yesterday's close (down day, red price) but
   // above today's open (up since open, green change).
