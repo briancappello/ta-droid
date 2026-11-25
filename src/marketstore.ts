@@ -105,6 +105,13 @@ export type MarketstoreWatchlistEntry = {
 export type MarketstoreWatchlist = {
   name: string;
   entries: MarketstoreWatchlistEntry[];
+  // Ranking metadata; absent on servers older than watchlist sessions.
+  basis?: string;
+  session?: string;
+  trading_date?: string;
+  window_start?: number;
+  window_end?: number;
+  complete?: boolean;
 };
 
 export function getWatchlists(): Promise<{

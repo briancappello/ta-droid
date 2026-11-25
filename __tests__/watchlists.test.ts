@@ -1,5 +1,11 @@
 import {
+  basisLabel,
+  fetchWatchlistEntries,
   fetchWatchlists,
+  openLabel,
+  priorCloseLabel,
+  sessionLabel,
+  toWatchMeta,
   toWatchRow,
   watchlistStreamKey,
 } from '../src/watchlists';
@@ -161,4 +167,57 @@ test('toWatchRow: aggregates have null price/change and carry avg_pct_change', (
 
 test('watchlistStreamKey builds the WATCHLISTS/1Min key', () => {
   expect(watchlistStreamKey('MOMENTUM')).toBe('WATCHLISTS/1Min/MOMENTUM');
+});
+
+test('fetchWatchlistEntries returns the ranking metadata with the rows', async () => {
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      name: 'PCT_CHANGE_UP_TRADITIONAL',
+      basis: 'traditional',
+      session: 'regular',
+      trading_date: '2026-11-25',
+      window_start: 1764081000,
+      window_end: 1764090000,
+      complete: false,
+      entries: [{ symbol: 'NVDA', rank: 1, fields: { price: 104, prior_close: 100, open: 102 } }],
+    }),
+  } as unknown as Response);
+  const { meta, rows } = await fetchWatchlistEntries('PCT_CHANGE_UP_TRADITIONAL');
+  expect(meta).toEqual({ session: 'regular', basis: 'traditional', tradingDate: '2026-11-25' });
+  expect(rows[0].symbol).toBe('NVDA');
+  expect(rows[0].priceUp).toBe(true);
+});
+
+test('toWatchMeta tolerates an older server that omits the metadata', () => {
+  const none = { session: null, basis: null, tradingDate: null };
+  expect(toWatchMeta({ name: 'MOMENTUM', entries: [] })).toEqual(none);
+  expect(toWatchMeta(undefined)).toEqual(none);
+  expect(toWatchMeta({ session: 'lunch', basis: 'weird', trading_date: '' })).toEqual(none);
+});
+
+test('session and basis labels', () => {
+  expect(sessionLabel('premarket')).toBe('Premarket session');
+  expect(sessionLabel('regular')).toBe('Regular session');
+  expect(sessionLabel('afterhours')).toBe('After-hours session');
+  expect(sessionLabel(null)).toBeNull();
+  expect(basisLabel('session')).toBe('Session basis');
+  expect(basisLabel('traditional')).toBe('Traditional basis');
+  expect(basisLabel(null)).toBeNull();
+});
+
+test('priorCloseLabel follows the basis; openLabel follows the session', () => {
+  const m = (session: any, basis: any) => ({ session, basis, tradingDate: null });
+  // Session basis: the close of the session immediately before.
+  expect(priorCloseLabel(m('premarket', 'session'))).toBe('previous after-hours close');
+  expect(priorCloseLabel(m('regular', 'session'))).toBe('premarket close');
+  expect(priorCloseLabel(m('afterhours', 'session'))).toBe('official close');
+  expect(priorCloseLabel(m(null, 'session'))).toBe('previous session close');
+  // Traditional basis: the previous trading day's official close.
+  expect(priorCloseLabel(m('regular', 'traditional'))).toBe('previous day close');
+  // No basis (older server): unknown meaning, so no label.
+  expect(priorCloseLabel(m('regular', null))).toBeNull();
+  expect(openLabel(m('regular', 'traditional'))).toBe('regular open');
+  expect(openLabel(m('afterhours', 'session'))).toBe('after-hours open');
+  expect(openLabel(m(null, null))).toBeNull();
 });

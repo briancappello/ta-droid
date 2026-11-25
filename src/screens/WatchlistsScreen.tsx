@@ -10,11 +10,17 @@ import {
 import { AppHeader } from '../components/AppHeader';
 import { WatchlistPicker } from '../components/WatchlistPicker';
 import {
+  basisLabel,
   fetchWatchlists,
   fetchWatchlistEntries,
+  openLabel,
+  priorCloseLabel,
+  sessionLabel,
+  toWatchMeta,
   toWatchRow,
   watchlistStreamKey,
   type Watchlist,
+  type WatchMeta,
   type WatchRow,
 } from '../watchlists';
 import { formatMoney, formatPercent } from '../format';
@@ -24,6 +30,7 @@ export default function WatchlistsScreen({ navigation }: { navigation: any }) {
   const [lists, setLists] = useState<Watchlist[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [rows, setRows] = useState<WatchRow[]>([]);
+  const [meta, setMeta] = useState<WatchMeta>(toWatchMeta(null));
   const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
@@ -43,6 +50,7 @@ export default function WatchlistsScreen({ navigation }: { navigation: any }) {
   }, [load]);
 
   useEffect(() => {
+    setMeta(toWatchMeta(null));
     if (!selectedId) {
       setRows([]);
       return;
@@ -52,7 +60,8 @@ export default function WatchlistsScreen({ navigation }: { navigation: any }) {
     fetchWatchlistEntries(selectedId)
       .then(r => {
         if (alive) {
-          setRows(r);
+          setMeta(r.meta);
+          setRows(r.rows);
         }
       })
       .catch(() => {});
@@ -61,6 +70,7 @@ export default function WatchlistsScreen({ navigation }: { navigation: any }) {
       if (msg.data.msg_type === 'watchlist_update') {
         const syms: any[] = msg.data.payload?.symbols ?? [];
         if (alive) {
+          setMeta(toWatchMeta(msg.data.payload));
           setRows(syms.map(toWatchRow));
         }
       }
@@ -93,6 +103,20 @@ export default function WatchlistsScreen({ navigation }: { navigation: any }) {
     );
   }
 
+  // Each part is hidden when the server omits it (older servers).
+  const info = [
+    sessionLabel(meta.session),
+    basisLabel(meta.basis),
+    meta.tradingDate,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const prior = priorCloseLabel(meta);
+  const open = openLabel(meta);
+  const legend = [prior && `Price vs ${prior}`, open && `change since ${open}`]
+    .filter(Boolean)
+    .join(', ');
+
   return (
     <View style={styles.container}>
       {header}
@@ -101,12 +125,18 @@ export default function WatchlistsScreen({ navigation }: { navigation: any }) {
         selectedId={selectedId}
         onSelect={setSelectedId}
       />
+      {(info !== '' || legend !== '') && (
+        <View style={styles.meta}>
+          {info !== '' && <Text style={styles.metaInfo}>{info}</Text>}
+          {legend !== '' && <Text style={styles.metaLegend}>{legend}</Text>}
+        </View>
+      )}
       <ScrollView>
         {rows.map((row, i) => {
           const green = '#4caf50';
           const red = '#f44336';
-          // Price colors against yesterday's close (day move); the change is
-          // price - today's open and colors against the open.
+          // Price colors against prior_close (its meaning follows the basis,
+          // see the legend); the change is from the session's open.
           const priceColor =
             row.priceUp == null ? '#e0e0e0' : row.priceUp ? green : red;
           const changeColor = row.changeUp ? green : red;
@@ -161,6 +191,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a1a2e' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyText: { color: '#8a97b0', fontSize: 15 },
+  meta: { paddingHorizontal: 12, paddingBottom: 8 },
+  metaInfo: { color: '#cbd5e6', fontSize: 12, fontWeight: '600' },
+  metaLegend: { color: '#8a97b0', fontSize: 11, marginTop: 2 },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',

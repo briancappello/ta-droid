@@ -62,15 +62,16 @@ export async function fetchWatchlists(): Promise<Watchlist[]> {
 
 export type WatchRow = {
   symbol: string;
-  // Last price (today's most recent close).
+  // Last price (the session's most recent close).
   price: number | null;
-  // Day direction: price vs yesterday's close. Colors the price. null when
-  // either value is missing (e.g. aggregate rows).
+  // Price vs prior_close, whose meaning depends on the basis (see
+  // priorCloseLabel). Colors the price. null when either value is missing
+  // (e.g. aggregate rows).
   priceUp: boolean | null;
-  // Intraday percent change from today's open: (price - open) / open * 100.
+  // Percent change from the session's open: (price - open) / open * 100.
   // Colors itself. null when price/open are missing or open is 0.
   changePct: number | null;
-  // Change direction: price vs today's open (i.e. changePct >= 0).
+  // Change direction: price vs the session's open (i.e. changePct >= 0).
   changeUp: boolean | null;
   // Aggregate rows (Sector/Industry) have no tradeable price; they carry
   // avg_pct_change instead, shown in place of price+change.
@@ -79,8 +80,8 @@ export type WatchRow = {
 
 // Maps a flattened ranked-symbol object (WS watchlist_update symbol, or a REST
 // entry with its `fields` spread in) to a display row. The price colors against
-// prior_close (day move); the change is the intraday percent from today's open
-// and colors against the open. Aggregate rows lack price/open and use
+// prior_close; the change is the percent from the session's open and colors
+// against the open. Aggregate rows lack price/open and use
 // avg_pct_change.
 export function toWatchRow(s: any): WatchRow {
   const price = typeof s.price === 'number' ? s.price : null;
@@ -100,11 +101,89 @@ export function toWatchRow(s: any): WatchRow {
   };
 }
 
+export type Session = 'premarket' | 'regular' | 'afterhours';
+export type Basis = 'session' | 'traditional';
+
+// Which ranking a list is: sent by the server with every REST list and
+// watchlist_update push. Older servers omit it, so every field may be null.
+export type WatchMeta = {
+  session: Session | null;
+  basis: Basis | null;
+  tradingDate: string | null;
+};
+
+const SESSIONS: Session[] = ['premarket', 'regular', 'afterhours'];
+const BASES: Basis[] = ['session', 'traditional'];
+
+export function toWatchMeta(m: any): WatchMeta {
+  return {
+    session: SESSIONS.includes(m?.session) ? m.session : null,
+    basis: BASES.includes(m?.basis) ? m.basis : null,
+    tradingDate:
+      typeof m?.trading_date === 'string' && m.trading_date
+        ? m.trading_date
+        : null,
+  };
+}
+
+const SESSION_LABELS: Record<Session, string> = {
+  premarket: 'Premarket',
+  regular: 'Regular',
+  afterhours: 'After-hours',
+};
+
+export function sessionLabel(s: Session | null): string | null {
+  return s ? `${SESSION_LABELS[s]} session` : null;
+}
+
+export function basisLabel(b: Basis | null): string | null {
+  return b === 'traditional'
+    ? 'Traditional basis'
+    : b === 'session'
+    ? 'Session basis'
+    : null;
+}
+
+// What prior_close is: the previous day's official close (traditional), or
+// the close of the session immediately before (session basis).
+export function priorCloseLabel(meta: WatchMeta): string | null {
+  if (meta.basis === 'traditional') {
+    return 'previous day close';
+  }
+  if (meta.basis !== 'session') {
+    return null;
+  }
+  switch (meta.session) {
+    case 'premarket':
+      return 'previous after-hours close';
+    case 'regular':
+      return 'premarket close';
+    case 'afterhours':
+      return 'official close';
+    default:
+      return 'previous session close';
+  }
+}
+
+// open is the open of the session's first bar, under either basis.
+export function openLabel(meta: WatchMeta): string | null {
+  return meta.session
+    ? `${SESSION_LABELS[meta.session].toLowerCase()} open`
+    : null;
+}
+
 export const watchlistStreamKey = (id: string) => `WATCHLISTS/1Min/${id}`;
+
+export type WatchlistSnapshot = { meta: WatchMeta; rows: WatchRow[] };
 
 // Initial REST paint. The REST watchlist nests metrics under `fields`, so
 // spread them before mapping.
-export async function fetchWatchlistEntries(id: string): Promise<WatchRow[]> {
+export async function fetchWatchlistEntries(
+  id: string,
+): Promise<WatchlistSnapshot> {
   const wl = await getWatchlist(id);
-  return wl.entries.map(e => toWatchRow({ symbol: e.symbol, ...e.fields }));
+  return {
+    meta: toWatchMeta(wl),
+    rows: wl.entries.map(e => toWatchRow({ symbol: e.symbol, ...e.fields })),
+  };
 }
